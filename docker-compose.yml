@@ -1,0 +1,12 @@
+services:
+  roastapp:
+    build: .
+    container_name: roastapp
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent storage for the SQLite database.
+      # On Synology, change ./data to an absolute path on your NAS, e.g.:
+      #   /volume1/docker/roastapp:/data
+      - ./data:/data
+    restart: unless-stopped

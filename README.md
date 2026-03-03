@@ -26,6 +26,8 @@ A browser-based coffee roast tracker. Log roasting sessions, manage bean invento
 
 ## Getting Started
 
+### Run locally
+
 **Prerequisites:** Python 3.8+
 
 ```bash
@@ -41,6 +43,26 @@ python app.py
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Run with Docker (Synology NAS or any Docker host)
+
+**Prerequisites:** Docker + Docker Compose
+
+```bash
+git clone https://github.com/tdfguy2002/RoastApp.git
+cd RoastApp
+docker compose up -d
+```
+
+Then open [http://your-host:3000](http://your-host:3000) in your browser.
+
+The SQLite database is stored in a `./data/` directory on the host so your data survives container restarts and upgrades.
+
+**Synology tip:** In `docker-compose.yml`, change the volume path to an absolute location on your NAS, e.g.:
+```yaml
+volumes:
+  - /volume1/docker/roastapp:/data
+```
 
 ## CSV Import Format
 

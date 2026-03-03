@@ -2,11 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, f
 import sqlite3
 import csv
 import io
+import os
 from datetime import date, datetime
 
 app = Flask(__name__)
 app.secret_key = 'roastapp-secret-key'
-DATABASE = 'roastapp.db'
+DATABASE = os.environ.get('DATABASE', 'roastapp.db')
 
 PROCESS_TYPES = ['Washed', 'Natural', 'Honey', 'Wet-Hulled']
 LBS_TO_G = 453.592
