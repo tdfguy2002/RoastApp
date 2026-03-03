@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4 class="page-title">Log a Roast</h4>
+
+<div class="row">
+  <div class="col-12 col-lg-6">
+    <div class="card p-4">
+      {% if beans %}
+      <form action="/roasts" method="post">
+        <div class="mb-3">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" value="{{ today }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Bean Type</label>
+          <select name="bean_id" class="form-select" required>
+            {% for bean in beans %}
+            <option value="{{ bean.id }}">
+              {{ bean.name }} ({{ bean.process_type }}) — {{ "%.1f"|format(bean.inventory_g) }}g in stock
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Start Weight (g)</label>
+          <input type="number" name="start_weight_g" class="form-control"
+                 step="0.1" min="1" placeholder="e.g. 250" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">End Weight (g)</label>
+          <input type="number" name="end_weight_g" class="form-control"
+                 step="0.1" min="1" placeholder="e.g. 210" required>
+        </div>
+        <button type="submit" class="btn btn-coffee w-100">Log Roast</button>
+      </form>
+      {% else %}
+      <p class="text-muted mb-0">
+        No beans yet. <a href="/beans">Add some beans</a> before logging a roast.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4 class="page-title">Roast History</h4>
+
+<div class="row g-4">
+
+  <!-- Chart -->
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="section-label">Weight Loss Over Time</p>
+      {% if roasts %}
+      <div style="position:relative;height:360px">
+        <canvas id="roastChart"></canvas>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No roasts logged yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- History Table -->
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="section-label">All Roasts</p>
+      {% if roasts %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Bean</th>
+              <th>Start (g)</th>
+              <th>End (g)</th>
+              <th>Loss (g)</th>
+              <th>Loss (%)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for roast in roasts %}
+            <tr>
+              <td>{{ roast.date }}</td>
+              <td>{{ roast.bean_name }}</td>
+              <td>{{ roast.start_weight_g }}</td>
+              <td>{{ roast.end_weight_g }}</td>
+              <td>{{ roast.weight_loss_g }}</td>
+              <td>{{ roast.weight_loss_pct }}%</td>
+              <td class="text-end d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="modal" data-bs-target="#editRoastModal"
+                        data-id="{{ roast.id }}"
+                        data-date="{{ roast.date }}"
+                        data-bean="{{ roast.bean_id }}"
+                        data-start="{{ roast.start_weight_g }}"
+                        data-end="{{ roast.end_weight_g }}">
+                  Edit
+                </button>
+                <form action="/roasts/{{ roast.id }}/delete" method="post"
+                      onsubmit="return confirm('Delete this roast?')">
+                  <button class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No roasts logged yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Edit Roast Modal -->
+<div class="modal fade" id="editRoastModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editRoastForm" method="post">
+        <div class="modal-header" style="background-color:#1a0800">
+          <h5 class="modal-title text-white">Edit Roast</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" id="editRoastDate" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Bean Type</label>
+            <select name="bean_id" id="editRoastBean" class="form-select" required>
+              {% for bean in beans %}
+              <option value="{{ bean.id }}">{{ bean.name }} ({{ bean.process_type }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Start Weight (g)</label>
+            <input type="number" name="start_weight_g" id="editRoastStart" class="form-control"
+                   step="0.1" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">End Weight (g)</label>
+            <input type="number" name="end_weight_g" id="editRoastEnd" class="form-control"
+                   step="0.1" min="1" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-coffee">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if roasts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+(async function () {
+  const res = await fetch('/api/chart-data');
+  const roasts = await res.json();
+
+  const palette = ['#c05808', '#f5b010', '#7a3008', '#e8a020', '#ffd040', '#3d1800'];
+  const beanMap = {};
+  let ci = 0;
+
+  roasts.forEach(r => {
+    if (!beanMap[r.bean_name]) {
+      beanMap[r.bean_name] = {
+        label: r.bean_name,
+        data: [],
+        backgroundColor: palette[ci % palette.length],
+        borderColor: palette[ci % palette.length],
+        showLine: true,
+        tension: 0.3,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+      };
+      ci++;
+    }
+    beanMap[r.bean_name].data.push({
+      x: r.date,
+      y: r.weight_loss_pct,
+      start: r.start_weight_g,
+      end: r.end_weight_g,
+      loss_g: r.weight_loss_g,
+    });
+  });
+
+  const allY = roasts.map(r => r.weight_loss_pct);
+  const dataMin = Math.min(...allY);
+  const dataMax = Math.max(...allY);
+  const margin = Math.max(2, (dataMax - dataMin) * 0.5);
+  const yMin = Math.max(0, parseFloat((dataMin - margin).toFixed(1)));
+  const yMax = parseFloat((dataMax + margin).toFixed(1));
+
+  new Chart(document.getElementById('roastChart'), {
+    type: 'scatter',
+    data: { datasets: Object.values(beanMap) },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            title(contexts) {
+              const d = contexts[0].raw;
+              return `${contexts[0].dataset.label}  —  ${d.x}`;
+            },
+            label(ctx) {
+              const d = ctx.raw;
+              return [
+                `Start weight : ${d.start} g`,
+                `End weight   : ${d.end} g`,
+                `Weight loss  : ${d.loss_g} g  (${ctx.parsed.y}%)`,
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day', displayFormats: { day: 'MMM d, yyyy' } },
+          title: { display: true, text: 'Roast Date' }
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          title: { display: true, text: 'Weight Loss (%)' },
+          ticks: { callback: val => val + '%' }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+<script>
+  const editRoastModal = document.getElementById('editRoastModal');
+  editRoastModal.addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('editRoastForm').action = '/roasts/' + btn.dataset.id + '/edit';
+    document.getElementById('editRoastDate').value  = btn.dataset.date;
+    document.getElementById('editRoastStart').value = btn.dataset.start;
+    document.getElementById('editRoastEnd').value   = btn.dataset.end;
+    const sel = document.getElementById('editRoastBean');
+    for (const opt of sel.options) {
+      opt.selected = opt.value === btn.dataset.bean;
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4 class="page-title">Beans</h4>
+
+<div class="row g-4">
+
+  <!-- Add Bean Form -->
+  <div class="col-12 col-lg-5">
+    <div class="card p-4">
+      <p class="section-label">Add New Bean</p>
+      <form action="/beans" method="post">
+        <div class="mb-3">
+          <label class="form-label">Bean Name</label>
+          <input type="text" name="name" class="form-control"
+                 placeholder="e.g. Ethiopia Yirgacheffe" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Processing Type</label>
+          <select name="process_type" class="form-select" required>
+            {% for pt in process_types %}
+            <option value="{{ pt }}">{{ pt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Inventory</label>
+          <div class="input-group">
+            <input type="number" name="inventory_g" class="form-control"
+                   step="0.01" min="0" placeholder="0" value="0" required>
+            <select name="inventory_unit" class="form-select" style="max-width:80px">
+              <option value="g">g</option>
+              <option value="lbs">lbs</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-coffee w-100">Add Bean</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Beans List -->
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="section-label">Bean Inventory</p>
+      {% if beans %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Process</th>
+              <th>Inventory (g)</th>
+              <th>Roasts</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bean in beans %}
+            <tr>
+              <td>{{ bean.name }}</td>
+              <td>
+                <span class="badge rounded-pill"
+                      style="background-color:#c05808;font-weight:500">
+                  {{ bean.process_type }}
+                </span>
+              </td>
+              <td>{{ "%.1f"|format(bean.inventory_g) }} g</td>
+              <td>{{ bean.roast_count }}</td>
+              <td class="text-end d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="modal" data-bs-target="#editModal"
+                        data-id="{{ bean.id }}"
+                        data-name="{{ bean.name }}"
+                        data-process="{{ bean.process_type }}"
+                        data-inventory="{{ bean.inventory_g }}">
+                  Edit
+                </button>
+                <form action="/beans/{{ bean.id }}/delete" method="post"
+                      onsubmit="return confirm('Delete this bean?')">
+                  <button class="btn btn-sm btn-outline-danger"
+                          {% if bean.roast_count > 0 %}disabled
+                          title="Used in {{ bean.roast_count }} roast(s) — cannot delete"
+                          {% endif %}>
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No beans added yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Edit Bean Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editForm" method="post">
+        <div class="modal-header" style="background-color:#1a0800">
+          <h5 class="modal-title text-white" id="editModalLabel">Edit Bean</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Bean Name</label>
+            <input type="text" name="name" id="editName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Processing Type</label>
+            <select name="process_type" id="editProcess" class="form-select" required>
+              {% for pt in process_types %}
+              <option value="{{ pt }}">{{ pt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Inventory</label>
+            <div class="input-group">
+              <input type="number" name="inventory_g" id="editInventory" class="form-control"
+                     step="0.01" min="0" required>
+              <select name="inventory_unit" id="editUnit" class="form-select" style="max-width:80px">
+                <option value="g">g</option>
+                <option value="lbs">lbs</option>
+              </select>
+            </div>
+            <div class="form-text" id="editConvertNote"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-coffee">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const LBS_TO_G = 453.592;
+
+  const editModal = document.getElementById('editModal');
+  const editInventory = document.getElementById('editInventory');
+  const editUnit = document.getElementById('editUnit');
+  const editNote = document.getElementById('editConvertNote');
+
+  editModal.addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('editForm').action = '/beans/' + btn.dataset.id + '/edit';
+    document.getElementById('editName').value = btn.dataset.name;
+    editInventory.value = btn.dataset.inventory;
+    editUnit.value = 'g';
+    editNote.textContent = '';
+    const sel = document.getElementById('editProcess');
+    for (const opt of sel.options) {
+      opt.selected = opt.value === btn.dataset.process;
+    }
+  });
+
+  function updateConvertNote() {
+    if (editUnit.value === 'lbs') {
+      const lbs = parseFloat(editInventory.value);
+      if (!isNaN(lbs) && lbs > 0) {
+        editNote.textContent = '= ' + (lbs * LBS_TO_G).toFixed(1) + ' g';
+      } else {
+        editNote.textContent = '';
+      }
+    } else {
+      editNote.textContent = '';
+    }
+  }
+
+  editInventory.addEventListener('input', updateConvertNote);
+  editUnit.addEventListener('change', updateConvertNote);
+</script>
+{% endblock %}

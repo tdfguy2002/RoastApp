@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Add Roast Form -->
+  <div class="col-12">
+    <div class="card p-4">
+      <h5 class="mb-3">Log a Roast</h5>
+      {% if beans %}
+      <form action="/roasts" method="post" class="row g-3 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" value="{{ today }}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Bean</label>
+          <select name="bean_id" class="form-select" required>
+            {% for bean in beans %}
+            <option value="{{ bean.id }}">{{ bean.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Start Weight (g)</label>
+          <input type="number" name="start_weight_g" class="form-control"
+                 step="0.1" min="1" placeholder="e.g. 250" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">End Weight (g)</label>
+          <input type="number" name="end_weight_g" class="form-control"
+                 step="0.1" min="1" placeholder="e.g. 210" required>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-coffee w-100">Add Roast</button>
+        </div>
+      </form>
+      {% else %}
+      <p class="text-muted mb-0">
+        No beans yet. <a href="/beans">Add some beans</a> before logging a roast.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="col-12">
+    <div class="card p-4">
+      <h5 class="mb-3">Weight Loss Over Time</h5>
+      {% if roasts %}
+      <canvas id="roastChart" height="80"></canvas>
+      {% else %}
+      <p class="text-muted mb-0">No roasts logged yet. Add your first roast above.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Roast History -->
+  <div class="col-12">
+    <div class="card p-4">
+      <h5 class="mb-3">Roast History</h5>
+      {% if roasts %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Bean</th>
+              <th>Start (g)</th>
+              <th>End (g)</th>
+              <th>Loss (%)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for roast in roasts %}
+            <tr>
+              <td>{{ roast.date }}</td>
+              <td>{{ roast.bean_name }}</td>
+              <td>{{ roast.start_weight_g }}</td>
+              <td>{{ roast.end_weight_g }}</td>
+              <td>{{ roast.weight_loss_pct }}%</td>
+              <td class="text-end">
+                <form action="/roasts/{{ roast.id }}/delete" method="post"
+                      onsubmit="return confirm('Delete this roast?')">
+                  <button class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No roasts logged yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if roasts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+(async function () {
+  const res = await fetch('/api/chart-data');
+  const roasts = await res.json();
+
+  // One dataset per bean for automatic legend + distinct colors
+  const palette = ['#6f4e37', '#c8a96e', '#3d1a00', '#a0522d', '#d2691e', '#8b4513'];
+  const beanMap = {};
+  let ci = 0;
+
+  roasts.forEach(r => {
+    if (!beanMap[r.bean_name]) {
+      beanMap[r.bean_name] = {
+        label: r.bean_name,
+        data: [],
+        backgroundColor: palette[ci % palette.length],
+        borderColor: palette[ci % palette.length],
+        showLine: true,
+        tension: 0.3,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+      };
+      ci++;
+    }
+    beanMap[r.bean_name].data.push({
+      x: r.date,
+      y: r.weight_loss_pct,
+      start: r.start_weight_g,
+      end: r.end_weight_g,
+      loss_g: r.weight_loss_g,
+    });
+  });
+
+  // Auto-scale Y axis: give at least 4 percentage points of visible range
+  const allY = roasts.map(r => r.weight_loss_pct);
+  const dataMin = Math.min(...allY);
+  const dataMax = Math.max(...allY);
+  const margin = Math.max(2, (dataMax - dataMin) * 0.5);
+  const yMin = Math.max(0, parseFloat((dataMin - margin).toFixed(1)));
+  const yMax = parseFloat((dataMax + margin).toFixed(1));
+
+  new Chart(document.getElementById('roastChart'), {
+    type: 'scatter',
+    data: { datasets: Object.values(beanMap) },
+    options: {
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            title(contexts) {
+              const d = contexts[0].raw;
+              return `${contexts[0].dataset.label}  —  ${d.x}`;
+            },
+            label(ctx) {
+              const d = ctx.raw;
+              return [
+                `Start weight : ${d.start} g`,
+                `End weight   : ${d.end} g`,
+                `Weight loss  : ${d.loss_g} g  (${ctx.parsed.y}%)`,
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'day', displayFormats: { day: 'MMM d, yyyy' } },
+          title: { display: true, text: 'Roast Date' }
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          title: { display: true, text: 'Weight Loss (%)' },
+          ticks: { callback: val => val + '%' }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}
