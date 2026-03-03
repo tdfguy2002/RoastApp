@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4 class="page-title">Dashboard</h4>
+
+<!-- Stats row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card p-3 text-center">
+      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        {{ stats.total_roasts or 0 }}
+      </div>
+      <div class="section-label mb-0">Total Roasts</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card p-3 text-center">
+      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        {{ stats.avg_loss_pct or '—' }}{% if stats.avg_loss_pct %}%{% endif %}
+      </div>
+      <div class="section-label mb-0">Avg Weight Loss</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card p-3 text-center">
+      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        {% if stats.total_weight_roasted %}
+          {{ "%.0f"|format(stats.total_weight_roasted) }}g
+        {% else %}—{% endif %}
+      </div>
+      <div class="section-label mb-0">Total Weight Roasted</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card p-3 text-center">
+      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        {% if total_inventory_value > 0 %}
+          ${{ "%.2f"|format(total_inventory_value) }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="section-label mb-0">Inventory Value</div>
+    </div>
+  </div>
+</div>
+
+<!-- Low inventory alert -->
+{% set low_beans = inventory | selectattr('inventory_g', 'lt', low_threshold) | list %}
+{% if low_beans %}
+<div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 mb-4" role="alert">
+  <span style="font-size:1.1rem">&#9888;</span>
+  <div>
+    <strong>Low inventory</strong> —
+    {% for b in low_beans %}
+      <strong>{{ b.name }}</strong> ({{ "%.0f"|format(b.inventory_g) }}g){% if not loop.last %}, {% endif %}
+    {% endfor %}
+    below {{ "%.0f"|format(low_threshold) }}g threshold.
+  </div>
+  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Main content -->
+<div class="row g-4">
+
+  <!-- Recent Roasts -->
+  <div class="col-12 col-lg-7">
+    <div class="card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="section-label mb-0">Recent Roasts</p>
+        <a href="/history" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">View all →</a>
+      </div>
+      {% if recent_roasts %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Bean</th>
+              <th>Start (g)</th>
+              <th>End (g)</th>
+              <th>Loss</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for roast in recent_roasts %}
+            <tr>
+              <td style="white-space:nowrap">{{ roast.date }}</td>
+              <td>{{ roast.bean_name }}</td>
+              <td>{{ roast.start_weight_g }}</td>
+              <td>{{ roast.end_weight_g }}</td>
+              <td>
+                <span style="color:#6aa9e3;font-weight:500">{{ roast.weight_loss_pct }}%</span>
+                <span class="text-muted" style="font-size:0.8rem"> / {{ roast.weight_loss_g }}g</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No roasts logged yet. <a href="/roast">Log your first roast →</a></p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Inventory -->
+  <div class="col-12 col-lg-5">
+    <div class="card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="section-label mb-0">Bean Inventory</p>
+        <a href="/beans" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">Manage →</a>
+      </div>
+      {% if inventory %}
+      <div class="d-flex flex-column gap-2">
+        {% for bean in inventory %}
+        {% set pct = [[(bean.inventory_g / low_threshold * 100), 0] | max, 100] | min %}
+        <div>
+          <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span style="font-size:0.875rem;font-weight:500">
+              {{ bean.name }}
+              {% if bean.inventory_g < low_threshold %}
+                <span style="color:#ffc107;font-size:0.75rem">&#9888;</span>
+              {% endif %}
+            </span>
+            <span style="font-size:0.8rem;color:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}rgba(220,225,231,0.6){% endif %}">
+              {{ "%.0f"|format(bean.inventory_g) }}g
+            </span>
+          </div>
+          <div style="height:5px;background:#25384f;border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:{{ pct }}%;border-radius:3px;
+                        background:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}#6aa9e3{% endif %};
+                        transition:width 0.3s"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No beans added yet. <a href="/beans">Add beans →</a></p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

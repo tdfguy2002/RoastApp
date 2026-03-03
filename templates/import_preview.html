@@ -10,7 +10,7 @@
     <div class="card p-4">
       <p class="section-label mb-2">Summary</p>
       <div class="d-flex flex-wrap gap-3 align-items-center">
-        <span class="badge" style="background-color:#2a6a2a;font-size:0.85rem">
+        <span class="badge" style="background-color:#6aa9e3;color:#040a11;font-size:0.85rem">
           {{ valid|length }} row{{ 's' if valid|length != 1 }} ready to import
         </span>
         {% if invalid %}
@@ -65,7 +65,7 @@
                 {% if row.errors %}
                   <span style="color:#c05808">&#10007; Skip</span>
                 {% else %}
-                  <span style="color:#3a9a3a">&#10003; Import</span>
+                  <span style="color:#6aa9e3">&#10003; Import</span>
                 {% endif %}
               </td>
             </tr>

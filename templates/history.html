@@ -17,7 +17,13 @@
       {% if roasts %}
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div id="beanToggles" class="d-flex flex-wrap gap-2"></div>
-        <button id="resetZoom" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;white-space:nowrap">Reset Zoom</button>
+        <div class="d-flex align-items-center gap-2">
+          <div class="btn-group btn-group-sm" id="modeToggle">
+            <button type="button" class="btn btn-coffee" data-mode="pct" style="font-size:0.78rem">%</button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="g" style="font-size:0.78rem">g</button>
+          </div>
+          <button id="resetZoom" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;white-space:nowrap">Reset Zoom</button>
+        </div>
       </div>
       <div style="position:relative;height:360px">
         <canvas id="roastChart"></canvas>
@@ -33,7 +39,7 @@
     <div class="card p-4">
       <p class="section-label">All Roasts
         {% if roasts %}
-        <span class="badge ms-2" style="background-color:#c05808;font-size:0.75rem;vertical-align:middle">
+        <span class="badge ms-2" style="background-color:#6aa9e3;color:#040a11;font-size:0.75rem;vertical-align:middle">
           {{ roasts|length }}
         </span>
         {% endif %}
@@ -49,6 +55,8 @@
               <th>End (g)</th>
               <th>Loss (g)</th>
               <th>Loss (%)</th>
+              <th>1st Crack</th>
+              <th>Total Time</th>
               <th></th>
             </tr>
           </thead>
@@ -61,6 +69,8 @@
               <td>{{ roast.end_weight_g }}</td>
               <td>{{ roast.weight_loss_g }}</td>
               <td>{{ roast.weight_loss_pct }}%</td>
+              <td>{{ roast.first_crack_fmt or '—' }}</td>
+              <td>{{ roast.total_roast_time or '—' }}</td>
               <td class="text-end d-flex gap-2 justify-content-end">
                 <button class="btn btn-sm btn-outline-secondary"
                         data-bs-toggle="modal" data-bs-target="#editRoastModal"
@@ -68,7 +78,11 @@
                         data-date="{{ roast.date }}"
                         data-bean="{{ roast.bean_id }}"
                         data-start="{{ roast.start_weight_g }}"
-                        data-end="{{ roast.end_weight_g }}">
+                        data-end="{{ roast.end_weight_g }}"
+                        data-crack="{{ roast.first_crack_fmt or '' }}"
+                        data-c-used="{{ roast.c_button_used }}"
+                        data-plus="{{ roast.plus_presses }}"
+                        data-minus="{{ roast.minus_presses }}">
                   Edit
                 </button>
                 <form action="/roasts/{{ roast.id }}/delete" method="post"
@@ -94,7 +108,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <form action="/roasts/import/preview" method="post" enctype="multipart/form-data">
-        <div class="modal-header" style="background-color:#080200">
+        <div class="modal-header">
           <h5 class="modal-title text-white">Import CSV</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -123,7 +137,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <form id="editRoastForm" method="post">
-        <div class="modal-header" style="background-color:#080200">
+        <div class="modal-header">
           <h5 class="modal-title text-white">Edit Roast</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -150,6 +164,37 @@
             <input type="number" name="end_weight_g" id="editRoastEnd" class="form-control"
                    step="0.1" min="1" required>
           </div>
+          <hr style="border-color:#25384f">
+          <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
+          <div class="mb-3">
+            <label class="form-label">First Crack Time</label>
+            <input type="text" name="first_crack_time" id="editRoastCrack" class="form-control"
+                   placeholder="e.g. 9:45">
+            <div class="form-text">Countdown time on roaster when first crack occurs (M:SS)</div>
+          </div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" name="c_button_used" id="editRoastCUsed" class="form-check-input" value="1">
+            <label class="form-check-label" for="editRoastCUsed" style="font-size:0.875rem;color:#dce1e7">C button was pressed at first crack</label>
+          </div>
+          <div id="editCButtonFields" style="display:none">
+            <div class="row g-3 mb-3">
+              <div class="col">
+                <label class="form-label">+ Presses</label>
+                <input type="number" name="plus_presses" id="editRoastPlus" class="form-control" min="0" value="0">
+                <div class="form-text">+10s per press</div>
+              </div>
+              <div class="col">
+                <label class="form-label">− Presses</label>
+                <input type="number" name="minus_presses" id="editRoastMinus" class="form-control" min="0" value="0">
+                <div class="form-text">−10s per press</div>
+              </div>
+            </div>
+          </div>
+          <div id="editTotalTimeDisplay" style="display:none">
+            <div style="background:#0e1722;border:1px solid #25384f;border-radius:4px;padding:0.6rem 0.875rem;font-size:0.875rem;margin-bottom:1rem">
+              Total roast time: <strong id="editTotalTimeValue" style="color:#6aa9e3">—</strong>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -172,7 +217,7 @@
   const res = await fetch('/api/chart-data');
   const roasts = await res.json();
 
-  const palette = ['#c05808', '#f5b010', '#7a3008', '#e8a020', '#ffd040', '#3d1800'];
+  const palette = ['#6aa9e3', '#4fc9da', '#5a7fd4', '#88bae9', '#3b8fd4', '#a78bfa'];
   const beanMap = {};
   let ci = 0;
 
@@ -193,22 +238,57 @@
     beanMap[r.bean_name].data.push({
       x: r.date,
       y: r.weight_loss_pct,
+      loss_pct: r.weight_loss_pct,
+      loss_g: r.weight_loss_g,
       start: r.start_weight_g,
       end: r.end_weight_g,
-      loss_g: r.weight_loss_g,
     });
   });
 
-  const allY = roasts.map(r => r.weight_loss_pct);
-  const dataMin = Math.min(...allY);
-  const dataMax = Math.max(...allY);
-  const margin = Math.max(2, (dataMax - dataMin) * 0.5);
-  const yMin = Math.max(0, parseFloat((dataMin - margin).toFixed(1)));
-  const yMax = parseFloat((dataMax + margin).toFixed(1));
+  // Build running average datasets
+  const beanDatasets = Object.values(beanMap);
+  const n = beanDatasets.length;
+
+  const avgDatasets = beanDatasets.map(ds => {
+    let sumPct = 0, sumG = 0;
+    const avgData = ds.data.map((pt, j) => {
+      sumPct += pt.loss_pct;
+      sumG   += pt.loss_g;
+      return {
+        x:        pt.x,
+        y:        parseFloat((sumPct / (j + 1)).toFixed(2)),
+        loss_pct: parseFloat((sumPct / (j + 1)).toFixed(2)),
+        loss_g:   parseFloat((sumG   / (j + 1)).toFixed(2)),
+      };
+    });
+    return {
+      label:            ds.label + ' (avg)',
+      data:             avgData,
+      borderColor:      ds.borderColor,
+      backgroundColor:  ds.borderColor,
+      borderDash:       [6, 4],
+      borderWidth:      1.5,
+      showLine:         true,
+      tension:          0.3,
+      pointRadius:      0,
+      pointHoverRadius: 5,
+      pointHitRadius:   12,
+    };
+  });
+
+  function yBounds(values) {
+    const lo = Math.min(...values), hi = Math.max(...values);
+    const margin = Math.max(hi > 50 ? 5 : 2, (hi - lo) * 0.5);
+    return { min: Math.max(0, parseFloat((lo - margin).toFixed(1))),
+             max: parseFloat((hi + margin).toFixed(1)) };
+  }
+
+  const initBounds = yBounds(roasts.map(r => r.weight_loss_pct));
+  const yMin = initBounds.min, yMax = initBounds.max;
 
   const chart = new Chart(document.getElementById('roastChart'), {
     type: 'scatter',
-    data: { datasets: Object.values(beanMap) },
+    data: { datasets: [...beanDatasets, ...avgDatasets] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -226,11 +306,14 @@
             },
             label(ctx) {
               const d = ctx.raw;
-              return [
-                `Start weight : ${d.start} g`,
-                `End weight   : ${d.end} g`,
-                `Weight loss  : ${d.loss_g} g  (${ctx.parsed.y}%)`,
-              ];
+              if (d.start !== undefined) {
+                return [
+                  `Start weight : ${d.start} g`,
+                  `End weight   : ${d.end} g`,
+                  `Weight loss  : ${d.loss_g} g  (${d.loss_pct}%)`,
+                ];
+              }
+              return `Running avg : ${d.loss_g} g  (${d.loss_pct}%)`;
             }
           }
         }
@@ -239,16 +322,16 @@
         x: {
           type: 'time',
           time: { unit: 'day', displayFormats: { day: 'MMM d, yyyy' } },
-          title: { display: true, text: 'Roast Date', color: '#9a7050' },
-          ticks: { color: '#e8d0a8' },
-          grid:  { color: 'rgba(232,160,32,0.1)' }
+          title: { display: true, text: 'Roast Date', color: 'rgba(220,225,231,0.4)' },
+          ticks: { color: 'rgba(220,225,231,0.6)' },
+          grid:  { color: 'rgba(37,56,79,0.8)' }
         },
         y: {
           min: yMin,
           max: yMax,
-          title: { display: true, text: 'Weight Loss (%)', color: '#9a7050' },
-          ticks: { color: '#e8d0a8', callback: val => (+val).toFixed(1) + '%' },
-          grid:  { color: 'rgba(232,160,32,0.1)' }
+          title: { display: true, text: 'Weight Loss (%)', color: 'rgba(220,225,231,0.4)' },
+          ticks: { color: 'rgba(220,225,231,0.6)', callback: val => (+val).toFixed(1) + '%' },
+          grid:  { color: 'rgba(37,56,79,0.8)' }
         }
       }
     }
@@ -256,30 +339,61 @@
 
   document.getElementById('resetZoom').addEventListener('click', () => chart.resetZoom());
 
-  // Build toggle pills
+  // % / g mode toggle
+  let chartMode = 'pct';
+  document.getElementById('modeToggle').addEventListener('click', e => {
+    const btn = e.target.closest('[data-mode]');
+    if (!btn || btn.dataset.mode === chartMode) return;
+    chartMode = btn.dataset.mode;
+
+    // Swap active button styles
+    document.querySelectorAll('#modeToggle [data-mode]').forEach(b => {
+      const active = b.dataset.mode === chartMode;
+      b.className = active ? 'btn btn-coffee' : 'btn btn-outline-secondary';
+      b.style.fontSize = '0.78rem';
+    });
+
+    // Update y values
+    const field = chartMode === 'pct' ? 'loss_pct' : 'loss_g';
+    chart.data.datasets.forEach(ds => ds.data.forEach(pt => { pt.y = pt[field]; }));
+
+    // Recalculate bounds from bean datasets only (avg is within same range)
+    const allVals = chart.data.datasets.slice(0, n).flatMap(ds => ds.data.map(pt => pt.y));
+    const b = yBounds(allVals);
+    chart.options.scales.y.min = b.min;
+    chart.options.scales.y.max = b.max;
+    chart.options.scales.y.title.text = chartMode === 'pct' ? 'Weight Loss (%)' : 'Weight Loss (g)';
+    chart.options.scales.y.ticks.callback = chartMode === 'pct'
+      ? val => (+val).toFixed(1) + '%'
+      : val => (+val).toFixed(1) + 'g';
+
+    chart.update();
+  });
+
+  // Build toggle pills (bean datasets only; avg follows automatically)
   const togglesEl = document.getElementById('beanToggles');
-  chart.data.datasets.forEach((ds, i) => {
+  beanDatasets.forEach((ds, i) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = ds.label;
-    btn.dataset.index = i;
     btn.style.cssText = `
       padding: 0.25rem 0.75rem;
       border-radius: 999px;
       border: 2px solid ${ds.borderColor};
       background-color: ${ds.borderColor};
-      color: #fff;
+      color: #040a11;
       font-size: 0.8rem;
       cursor: pointer;
       transition: opacity 0.15s, background-color 0.15s;
     `;
     btn.addEventListener('click', () => {
-      const meta = chart.getDatasetMeta(i);
-      meta.hidden = !meta.hidden;
+      const meta    = chart.getDatasetMeta(i);
+      const avgMeta = chart.getDatasetMeta(n + i);
+      meta.hidden = avgMeta.hidden = !meta.hidden;
       const hidden = meta.hidden;
       btn.style.backgroundColor = hidden ? 'transparent' : ds.borderColor;
-      btn.style.color = hidden ? ds.borderColor : '#fff';
-      btn.style.opacity = hidden ? '0.5' : '1';
+      btn.style.color            = hidden ? ds.borderColor : '#040a11';
+      btn.style.opacity          = hidden ? '0.5' : '1';
       chart.update();
     });
     togglesEl.appendChild(btn);
@@ -288,7 +402,62 @@
 </script>
 {% endif %}
 <script>
+  const FULL_ROAST_E    = 18 * 60;
+  const DEFAULT_AFTER_E = 190;
+
   const editRoastModal = document.getElementById('editRoastModal');
+  const editCUsedEl    = document.getElementById('editRoastCUsed');
+  const editCFieldsEl  = document.getElementById('editCButtonFields');
+  const editCrackEl    = document.getElementById('editRoastCrack');
+  const editPlusEl     = document.getElementById('editRoastPlus');
+  const editMinusEl    = document.getElementById('editRoastMinus');
+  const editTotalDisp  = document.getElementById('editTotalTimeDisplay');
+  const editTotalVal   = document.getElementById('editTotalTimeValue');
+
+  function parseCrackTimeE(str) {
+    if (!str || !str.trim()) return null;
+    const parts = str.trim().split(':');
+    if (parts.length !== 2) return null;
+    const mins = parseInt(parts[0], 10), secs = parseInt(parts[1], 10);
+    if (isNaN(mins) || isNaN(secs) || mins < 0 || mins > 18 || secs < 0 || secs > 59) return null;
+    return mins * 60 + secs;
+  }
+
+  function fmtTimeE(s) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function calcEditTotal() {
+    const crackSecs = parseCrackTimeE(editCrackEl.value);
+    const cUsed     = editCUsedEl.checked;
+    const plus      = parseInt(editPlusEl.value, 10) || 0;
+    const minus     = parseInt(editMinusEl.value, 10) || 0;
+
+    let total = null;
+    if (crackSecs !== null || cUsed) {
+      if (cUsed && crackSecs !== null) {
+        total = Math.max(0, FULL_ROAST_E - crackSecs) + Math.max(0, DEFAULT_AFTER_E + (plus - minus) * 10);
+      } else {
+        total = FULL_ROAST_E;
+      }
+    }
+
+    if (total !== null) {
+      editTotalVal.textContent = fmtTimeE(total);
+      editTotalDisp.style.display = '';
+    } else {
+      editTotalDisp.style.display = 'none';
+    }
+  }
+
+  editCUsedEl.addEventListener('change', function () {
+    editCFieldsEl.style.display = this.checked ? '' : 'none';
+    calcEditTotal();
+  });
+  editCrackEl.addEventListener('input', calcEditTotal);
+  editPlusEl.addEventListener('input', calcEditTotal);
+  editMinusEl.addEventListener('input', calcEditTotal);
+
   editRoastModal.addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
     document.getElementById('editRoastForm').action = '/roasts/' + btn.dataset.id + '/edit';
@@ -299,6 +468,15 @@
     for (const opt of sel.options) {
       opt.selected = opt.value === btn.dataset.bean;
     }
+
+    // Populate timing fields
+    editCrackEl.value     = btn.dataset.crack || '';
+    const cUsed           = btn.dataset.cUsed === '1';
+    editCUsedEl.checked   = cUsed;
+    editCFieldsEl.style.display = cUsed ? '' : 'none';
+    editPlusEl.value      = btn.dataset.plus  || 0;
+    editMinusEl.value     = btn.dataset.minus || 0;
+    calcEditTotal();
   });
 </script>
 {% endblock %}

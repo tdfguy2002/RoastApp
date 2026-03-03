@@ -10,6 +10,7 @@ DATABASE = 'roastapp.db'
 
 PROCESS_TYPES = ['Washed', 'Natural', 'Honey', 'Wet-Hulled']
 LBS_TO_G = 453.592
+KG_TO_G  = 1000.0
 
 
 def parse_inventory(form):
@@ -21,6 +22,68 @@ def parse_inventory(form):
     if form.get('inventory_unit') == 'lbs':
         value = round(value * LBS_TO_G, 1)
     return value
+
+
+def parse_cost(form):
+    """Return cost_per_g, converting from per-lb or per-kg if needed."""
+    try:
+        price = float(form.get('cost_price', 0))
+    except ValueError:
+        price = 0
+    if price <= 0:
+        return 0
+    unit = form.get('cost_unit', 'per_g')
+    if unit == 'per_lb':
+        return round(price / LBS_TO_G, 6)
+    if unit == 'per_kg':
+        return round(price / KG_TO_G, 6)
+    return round(price, 6)  # per_g
+
+
+def parse_crack_time(time_str):
+    """Parse 'M:SS' string into seconds remaining. Returns None if blank/invalid."""
+    if not time_str or not time_str.strip():
+        return None
+    try:
+        parts = time_str.strip().split(':')
+        if len(parts) != 2:
+            return None
+        mins, secs = int(parts[0]), int(parts[1])
+        if not (0 <= mins <= 18 and 0 <= secs <= 59):
+            return None
+        return mins * 60 + secs
+    except ValueError:
+        return None
+
+
+def calc_roast_time(first_crack_secs, c_used, plus_presses, minus_presses):
+    """Return total roast time in seconds."""
+    if not c_used or first_crack_secs is None:
+        return 18 * 60
+    elapsed = 18 * 60 - first_crack_secs
+    after_c = 190 + (plus_presses - minus_presses) * 10  # 3:10 = 190s
+    return max(elapsed, 0) + max(after_c, 0)
+
+
+def fmt_time(seconds):
+    """Format seconds as M:SS string."""
+    if seconds is None:
+        return None
+    return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
+
+
+def get_setting(key, default=None):
+    db = get_db()
+    row = db.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
+    db.close()
+    return row['value'] if row else default
+
+
+def set_setting(key, value):
+    conn = get_db()
+    conn.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', (key, str(value)))
+    conn.commit()
+    conn.close()
 
 
 def get_db():
@@ -36,7 +99,14 @@ def init_db():
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             name         TEXT    NOT NULL UNIQUE,
             process_type TEXT    NOT NULL DEFAULT 'Washed',
-            inventory_g  REAL    NOT NULL DEFAULT 0
+            inventory_g  REAL    NOT NULL DEFAULT 0,
+            cost_per_g   REAL    NOT NULL DEFAULT 0
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
         )
     ''')
     conn.execute('''
@@ -50,6 +120,9 @@ def init_db():
             FOREIGN KEY (bean_id) REFERENCES beans(id)
         )
     ''')
+    conn.execute(
+        "INSERT OR IGNORE INTO settings (key, value) VALUES ('low_inventory_g', '200')"
+    )
     conn.commit()
 
     # Migrate existing beans table if new columns are missing
@@ -60,13 +133,69 @@ def init_db():
     if 'inventory_g' not in existing_cols:
         conn.execute("ALTER TABLE beans ADD COLUMN inventory_g REAL NOT NULL DEFAULT 0")
         conn.commit()
+    if 'cost_per_g' not in existing_cols:
+        conn.execute("ALTER TABLE beans ADD COLUMN cost_per_g REAL NOT NULL DEFAULT 0")
+        conn.commit()
+
+    existing_roast_cols = {row[1] for row in conn.execute('PRAGMA table_info(roasts)').fetchall()}
+    for col, defn in [
+        ('first_crack_secs', 'INTEGER DEFAULT NULL'),
+        ('c_button_used',    'INTEGER NOT NULL DEFAULT 0'),
+        ('plus_presses',     'INTEGER NOT NULL DEFAULT 0'),
+        ('minus_presses',    'INTEGER NOT NULL DEFAULT 0'),
+    ]:
+        if col not in existing_roast_cols:
+            conn.execute(f'ALTER TABLE roasts ADD COLUMN {col} {defn}')
+            conn.commit()
 
     conn.close()
 
 
 @app.route('/')
 def index():
-    return redirect(url_for('roast_page'))
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/dashboard')
+def dashboard():
+    db = get_db()
+
+    recent_roasts = db.execute('''
+        SELECT r.id, r.date, b.name AS bean_name,
+               r.start_weight_g, r.end_weight_g, r.weight_loss_g,
+               ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct
+        FROM roasts r
+        JOIN beans b ON r.bean_id = b.id
+        ORDER BY r.date DESC, r.id DESC
+        LIMIT 10
+    ''').fetchall()
+
+    inventory = db.execute('''
+        SELECT b.id, b.name, b.process_type, b.inventory_g, b.cost_per_g,
+               ROUND(b.inventory_g * b.cost_per_g, 2) AS inventory_value
+        FROM beans b
+        ORDER BY b.inventory_g ASC
+    ''').fetchall()
+
+    stats = db.execute('''
+        SELECT COUNT(*) AS total_roasts,
+               ROUND(AVG(weight_loss_g / start_weight_g * 100.0), 1) AS avg_loss_pct,
+               SUM(start_weight_g) AS total_weight_roasted
+        FROM roasts
+    ''').fetchone()
+
+    total_inventory_value = db.execute(
+        'SELECT ROUND(SUM(inventory_g * cost_per_g), 2) AS val FROM beans'
+    ).fetchone()['val'] or 0
+
+    db.close()
+    low_threshold = float(get_setting('low_inventory_g', 200))
+    return render_template('dashboard.html',
+                           recent_roasts=recent_roasts,
+                           inventory=inventory,
+                           stats=stats,
+                           total_inventory_value=total_inventory_value,
+                           low_threshold=low_threshold)
 
 
 @app.route('/roast')
@@ -96,11 +225,17 @@ def add_roast():
         return redirect(url_for('roast_page'))
 
     loss = round(start - end, 1)
+    c_used       = 1 if request.form.get('c_button_used') else 0
+    first_crack  = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
+    plus_presses = int(request.form.get('plus_presses',  0) or 0)
+    minus_presses= int(request.form.get('minus_presses', 0) or 0)
+
     conn = get_db()
     conn.execute(
-        'INSERT INTO roasts (date, bean_id, start_weight_g, end_weight_g, weight_loss_g) '
-        'VALUES (?, ?, ?, ?, ?)',
-        (date_val, bean_id, start, end, loss)
+        'INSERT INTO roasts (date, bean_id, start_weight_g, end_weight_g, weight_loss_g, '
+        'first_crack_secs, c_button_used, plus_presses, minus_presses) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (date_val, bean_id, start, end, loss, first_crack, c_used, plus_presses, minus_presses)
     )
     # Deduct start weight from bean inventory
     conn.execute(
@@ -134,14 +269,27 @@ def delete_roast(roast_id):
 @app.route('/history')
 def history_page():
     db = get_db()
-    roasts = db.execute('''
+    rows = db.execute('''
         SELECT r.id, r.date, r.bean_id, b.name AS bean_name,
                r.start_weight_g, r.end_weight_g, r.weight_loss_g,
-               ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct
+               ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct,
+               r.first_crack_secs, r.c_button_used, r.plus_presses, r.minus_presses
         FROM roasts r
         JOIN beans b ON r.bean_id = b.id
         ORDER BY r.date DESC, r.id DESC
     ''').fetchall()
+
+    # Augment with calculated timing fields
+    roasts = []
+    for r in rows:
+        d = dict(r)
+        d['first_crack_fmt'] = fmt_time(r['first_crack_secs'])
+        d['total_roast_time'] = fmt_time(
+            calc_roast_time(r['first_crack_secs'], r['c_button_used'],
+                            r['plus_presses'], r['minus_presses'])
+        )
+        roasts.append(d)
+
     beans = db.execute('SELECT * FROM beans ORDER BY name').fetchall()
     db.close()
     return render_template('history.html', roasts=roasts, beans=beans)
@@ -165,7 +313,12 @@ def edit_roast(roast_id):
         flash('End weight must be less than start weight.', 'danger')
         return redirect(url_for('history_page'))
 
-    new_loss = round(new_start - new_end, 1)
+    new_loss      = round(new_start - new_end, 1)
+    c_used        = 1 if request.form.get('c_button_used') else 0
+    first_crack   = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
+    plus_presses  = int(request.form.get('plus_presses',  0) or 0)
+    minus_presses = int(request.form.get('minus_presses', 0) or 0)
+
     conn = get_db()
     old = conn.execute(
         'SELECT bean_id, start_weight_g FROM roasts WHERE id = ?', (roast_id,)
@@ -182,8 +335,10 @@ def edit_roast(roast_id):
         (new_start, new_bean_id)
     )
     conn.execute(
-        'UPDATE roasts SET date=?, bean_id=?, start_weight_g=?, end_weight_g=?, weight_loss_g=? WHERE id=?',
-        (date_val, new_bean_id, new_start, new_end, new_loss, roast_id)
+        'UPDATE roasts SET date=?, bean_id=?, start_weight_g=?, end_weight_g=?, weight_loss_g=?, '
+        'first_crack_secs=?, c_button_used=?, plus_presses=?, minus_presses=? WHERE id=?',
+        (date_val, new_bean_id, new_start, new_end, new_loss,
+         first_crack, c_used, plus_presses, minus_presses, roast_id)
     )
     conn.commit()
     conn.close()
@@ -197,6 +352,7 @@ def beans_page():
         name = request.form.get('name', '').strip()
         process_type = request.form.get('process_type', 'Washed')
         inventory_g = parse_inventory(request.form)
+        cost_per_g  = parse_cost(request.form)
 
         if not name:
             flash('Bean name cannot be empty.', 'danger')
@@ -206,8 +362,8 @@ def beans_page():
             conn = get_db()
             try:
                 conn.execute(
-                    'INSERT INTO beans (name, process_type, inventory_g) VALUES (?, ?, ?)',
-                    (name, process_type, inventory_g)
+                    'INSERT INTO beans (name, process_type, inventory_g, cost_per_g) VALUES (?, ?, ?, ?)',
+                    (name, process_type, inventory_g, cost_per_g)
                 )
                 conn.commit()
             except sqlite3.IntegrityError:
@@ -218,14 +374,18 @@ def beans_page():
 
     db = get_db()
     beans_list = db.execute('''
-        SELECT b.id, b.name, b.process_type, b.inventory_g, COUNT(r.id) AS roast_count
+        SELECT b.id, b.name, b.process_type, b.inventory_g, b.cost_per_g,
+               ROUND(b.inventory_g * b.cost_per_g, 2) AS inventory_value,
+               COUNT(r.id) AS roast_count
         FROM beans b
         LEFT JOIN roasts r ON r.bean_id = b.id
-        GROUP BY b.id, b.name, b.process_type, b.inventory_g
+        GROUP BY b.id, b.name, b.process_type, b.inventory_g, b.cost_per_g
         ORDER BY b.name
     ''').fetchall()
     db.close()
-    return render_template('beans.html', beans=beans_list, process_types=PROCESS_TYPES)
+    low_threshold = float(get_setting('low_inventory_g', 200))
+    return render_template('beans.html', beans=beans_list, process_types=PROCESS_TYPES,
+                           low_threshold=low_threshold)
 
 
 @app.route('/beans/<int:bean_id>/edit', methods=['POST'])
@@ -233,6 +393,7 @@ def edit_bean(bean_id):
     name = request.form.get('name', '').strip()
     process_type = request.form.get('process_type', 'Washed')
     inventory_g = parse_inventory(request.form)
+    cost_per_g  = parse_cost(request.form)
 
     if not name:
         flash('Bean name cannot be empty.', 'danger')
@@ -242,8 +403,8 @@ def edit_bean(bean_id):
         conn = get_db()
         try:
             conn.execute(
-                'UPDATE beans SET name = ?, process_type = ?, inventory_g = ? WHERE id = ?',
-                (name, process_type, inventory_g, bean_id)
+                'UPDATE beans SET name = ?, process_type = ?, inventory_g = ?, cost_per_g = ? WHERE id = ?',
+                (name, process_type, inventory_g, cost_per_g, bean_id)
             )
             conn.commit()
         except sqlite3.IntegrityError:
@@ -379,6 +540,18 @@ def import_confirm():
     conn.close()
     flash(f'Imported {count} roast(s) successfully.', 'success')
     return redirect(url_for('history_page'))
+
+
+@app.route('/settings/low-inventory', methods=['POST'])
+def update_low_inventory():
+    try:
+        threshold = float(request.form['low_inventory_g'])
+        if threshold < 0:
+            raise ValueError
+        set_setting('low_inventory_g', round(threshold, 1))
+    except (ValueError, KeyError):
+        flash('Invalid threshold value.', 'danger')
+    return redirect(url_for('beans_page'))
 
 
 @app.route('/api/chart-data')

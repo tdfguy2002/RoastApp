@@ -3,6 +3,21 @@
 {% block content %}
 <h4 class="page-title">Beans</h4>
 
+{% set low_beans = beans | selectattr('inventory_g', 'lt', low_threshold) | list %}
+{% if low_beans %}
+<div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 mb-4" role="alert">
+  <span style="font-size:1.1rem">&#9888;</span>
+  <div>
+    <strong>Low inventory</strong> —
+    {% for b in low_beans %}
+      <strong>{{ b.name }}</strong> ({{ "%.0f"|format(b.inventory_g) }}g){% if not loop.last %}, {% endif %}
+    {% endfor %}
+    is below the {{ "%.0f"|format(low_threshold) }}g threshold.
+  </div>
+  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
 <div class="row g-4">
 
   <!-- Add Bean Form -->
@@ -34,8 +49,40 @@
             </select>
           </div>
         </div>
+        <div class="mb-3">
+          <label class="form-label">Purchase Price</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="cost_price" class="form-control"
+                   step="any" min="0" placeholder="0.00" value="0">
+            <select name="cost_unit" class="form-select" style="max-width:100px">
+              <option value="per_lb">per lb</option>
+              <option value="per_kg">per kg</option>
+              <option value="per_g">per g</option>
+            </select>
+          </div>
+        </div>
         <button type="submit" class="btn btn-coffee w-100">Add Bean</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Low Inventory Threshold -->
+  <div class="col-12 col-lg-5">
+    <div class="card p-4">
+      <p class="section-label">Low Inventory Alert</p>
+      <form action="/settings/low-inventory" method="post" class="d-flex gap-2 align-items-end">
+        <div class="flex-grow-1">
+          <label class="form-label">Alert threshold</label>
+          <div class="input-group">
+            <input type="number" name="low_inventory_g" class="form-control"
+                   step="any" min="0" value="{{ "%.0f"|format(low_threshold) }}"required>
+            <span class="input-group-text">g</span>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-coffee">Save</button>
+      </form>
+      <div class="form-text mt-2">Beans with inventory below this amount will be flagged.</div>
     </div>
   </div>
 
@@ -51,21 +98,42 @@
               <th>Name</th>
               <th>Process</th>
               <th>Inventory (g)</th>
+              <th>Cost/g</th>
+              <th>Stock Value</th>
               <th>Roasts</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {% for bean in beans %}
-            <tr>
+            <tr {% if bean.inventory_g < low_threshold %}style="background-color:rgba(255,193,7,0.07)"{% endif %}>
               <td>{{ bean.name }}</td>
               <td>
                 <span class="badge rounded-pill"
-                      style="background-color:#c05808;font-weight:500">
+                      style="background-color:#6aa9e3;color:#040a11;font-weight:500">
                   {{ bean.process_type }}
                 </span>
               </td>
-              <td>{{ "%.1f"|format(bean.inventory_g) }} g</td>
+              <td>
+                {{ "%.1f"|format(bean.inventory_g) }} g
+                {% if bean.inventory_g < low_threshold %}
+                  <span style="color:#ffc107;font-size:0.8rem" title="Low inventory">&#9888;</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if bean.cost_per_g > 0 %}
+                  ${{ "%.4f"|format(bean.cost_per_g) }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if bean.inventory_value > 0 %}
+                  ${{ "%.2f"|format(bean.inventory_value) }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
               <td>{{ bean.roast_count }}</td>
               <td class="text-end d-flex gap-2 justify-content-end">
                 <button class="btn btn-sm btn-outline-secondary"
@@ -73,7 +141,8 @@
                         data-id="{{ bean.id }}"
                         data-name="{{ bean.name }}"
                         data-process="{{ bean.process_type }}"
-                        data-inventory="{{ bean.inventory_g }}">
+                        data-inventory="{{ bean.inventory_g }}"
+                        data-cost="{{ bean.cost_per_g }}">
                   Edit
                 </button>
                 <form action="/beans/{{ bean.id }}/delete" method="post"
@@ -89,6 +158,24 @@
             </tr>
             {% endfor %}
           </tbody>
+          <tfoot>
+            <tr style="border-top:2px solid #25384f">
+              <td colspan="2" class="fw-600" style="font-weight:600;color:#dce1e7">Total</td>
+              <td style="font-weight:600;color:#dce1e7">
+                {{ "%.1f"|format(beans|sum(attribute='inventory_g')) }} g
+              </td>
+              <td></td>
+              <td style="font-weight:600;color:#6aa9e3">
+                {% set total_value = beans|sum(attribute='inventory_value') %}
+                {% if total_value > 0 %}
+                  ${{ "%.2f"|format(total_value) }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
       {% else %}
@@ -104,7 +191,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <form id="editForm" method="post">
-        <div class="modal-header" style="background-color:#080200">
+        <div class="modal-header">
           <h5 class="modal-title text-white" id="editModalLabel">Edit Bean</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -133,6 +220,20 @@
             </div>
             <div class="form-text" id="editConvertNote"></div>
           </div>
+          <div class="mb-3">
+            <label class="form-label">Purchase Price</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" name="cost_price" id="editCostPrice" class="form-control"
+                     step="any" min="0" placeholder="0.00">
+              <select name="cost_unit" id="editCostUnit" class="form-select" style="max-width:100px">
+                <option value="per_lb">per lb</option>
+                <option value="per_kg">per kg</option>
+                <option value="per_g">per g</option>
+              </select>
+            </div>
+            <div class="form-text" id="editCostNote"></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -146,12 +247,15 @@
 
 {% block scripts %}
 <script>
-  const LBS_TO_G = 453.592;
+  const LBS_TO_G = 453.592, KG_TO_G = 1000;
 
-  const editModal = document.getElementById('editModal');
+  const editModal     = document.getElementById('editModal');
   const editInventory = document.getElementById('editInventory');
-  const editUnit = document.getElementById('editUnit');
-  const editNote = document.getElementById('editConvertNote');
+  const editUnit      = document.getElementById('editUnit');
+  const editNote      = document.getElementById('editConvertNote');
+  const editCostPrice = document.getElementById('editCostPrice');
+  const editCostUnit  = document.getElementById('editCostUnit');
+  const editCostNote  = document.getElementById('editCostNote');
 
   editModal.addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
@@ -164,6 +268,16 @@
     for (const opt of sel.options) {
       opt.selected = opt.value === btn.dataset.process;
     }
+    // Populate cost — stored as cost_per_g, display as per-lb for convenience
+    const cpg = parseFloat(btn.dataset.cost) || 0;
+    if (cpg > 0) {
+      editCostPrice.value = (cpg * LBS_TO_G).toFixed(2);
+      editCostUnit.value  = 'per_lb';
+    } else {
+      editCostPrice.value = '';
+      editCostUnit.value  = 'per_lb';
+    }
+    updateCostNote();
   });
 
   function updateConvertNote() {
@@ -181,5 +295,21 @@
 
   editInventory.addEventListener('input', updateConvertNote);
   editUnit.addEventListener('change', updateConvertNote);
+
+  function updateCostNote() {
+    const price = parseFloat(editCostPrice.value);
+    if (!isNaN(price) && price > 0) {
+      let cpg;
+      if (editCostUnit.value === 'per_lb') cpg = price / LBS_TO_G;
+      else if (editCostUnit.value === 'per_kg') cpg = price / KG_TO_G;
+      else cpg = price;
+      editCostNote.textContent = '= $' + cpg.toFixed(4) + ' per gram';
+    } else {
+      editCostNote.textContent = '';
+    }
+  }
+
+  editCostPrice.addEventListener('input', updateCostNote);
+  editCostUnit.addEventListener('change', updateCostNote);
 </script>
 {% endblock %}
