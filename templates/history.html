@@ -468,7 +468,11 @@
   editRoastModal.addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
     document.getElementById('editRoastForm').action = '/roasts/' + btn.dataset.id + '/edit';
-    document.getElementById('editRoastDate').value  = btn.dataset.date;
+    if (window.fpInstances['editRoastDate']) {
+      window.fpInstances['editRoastDate'].setDate(btn.dataset.date, false);
+    } else {
+      document.getElementById('editRoastDate').value = btn.dataset.date;
+    }
     document.getElementById('editRoastStart').value = btn.dataset.start;
     document.getElementById('editRoastEnd').value   = btn.dataset.end;
     const sel = document.getElementById('editRoastBean');

@@ -6,6 +6,7 @@
   <title>RoastApp</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css" rel="stylesheet">
   <style>
     /* ── Tabler dark palette ───────────────────────────────────────────
        page bg       #040a11
@@ -284,6 +285,61 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #25384f; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #35506a; }
+
+    /* ── Flatpickr overrides ── */
+    .flatpickr-calendar {
+      background: #182433;
+      border: 1px solid #25384f;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+    }
+    .flatpickr-months,
+    .flatpickr-weekdays,
+    span.flatpickr-weekday {
+      background: #0e1722;
+    }
+    .flatpickr-months {
+      border-radius: 6px 6px 0 0;
+      border-bottom: 1px solid #25384f;
+    }
+    .flatpickr-month { color: #dce1e7; fill: #dce1e7; }
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+      background: #0e1722; color: #dce1e7;
+    }
+    .flatpickr-current-month input.cur-year { color: #dce1e7; }
+    span.flatpickr-weekday { color: rgba(220,225,231,0.45); font-weight: 600; }
+    .flatpickr-days, .dayContainer { border-color: #25384f; }
+    .flatpickr-day {
+      color: #dce1e7;
+      border-radius: 4px;
+      height: 42px;
+      line-height: 42px;
+      max-width: 42px;
+    }
+    .flatpickr-day:hover, .flatpickr-day:focus {
+      background: rgba(106,169,227,0.15);
+      border-color: transparent;
+      color: #dce1e7;
+    }
+    .flatpickr-day.selected, .flatpickr-day.selected:hover {
+      background: #6aa9e3;
+      border-color: #6aa9e3;
+      color: #040a11;
+      font-weight: 600;
+    }
+    .flatpickr-day.today { border-color: #6aa9e3; color: #6aa9e3; }
+    .flatpickr-day.today:hover { background: rgba(106,169,227,0.15); }
+    .flatpickr-day.today.selected { background: #6aa9e3; color: #040a11; }
+    .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay,
+    .flatpickr-day.flatpickr-disabled { color: rgba(220,225,231,0.2); }
+    .flatpickr-prev-month, .flatpickr-next-month { fill: rgba(220,225,231,0.6); }
+    .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: #6aa9e3; }
+    .numInputWrapper:hover { background: rgba(255,255,255,0.05); }
+    .numInputWrapper span { border-color: #25384f; }
+    .numInputWrapper span:hover { background: rgba(106,169,227,0.2); }
+    .flatpickr-input { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -335,6 +391,16 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    window.fpInstances = {};
+    document.querySelectorAll('input[type="date"]').forEach(function (el) {
+      window.fpInstances[el.id] = flatpickr(el, {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+      });
+    });
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
