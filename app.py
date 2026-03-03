@@ -599,6 +599,11 @@ def update_low_inventory():
     return redirect(url_for('beans_page'))
 
 
+@app.route('/roast-color-card')
+def roast_color_card():
+    return render_template('roast_color_card.html')
+
+
 @app.route('/api/chart-data')
 def chart_data():
     db = get_db()

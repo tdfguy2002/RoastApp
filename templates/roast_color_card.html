@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4 class="page-title">Roast Color Card</h4>
+<div class="card p-3">
+  <p class="section-label mb-3">Sweet Maria's Roast Color Reference</p>
+  <img src="{{ url_for('static', filename='roast_color_card.png') }}"
+       alt="Sweet Maria's Roast Color Card"
+       style="width:100%;height:auto;border-radius:4px">
+</div>
+{% endblock %}
