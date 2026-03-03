@@ -1,52 +1,44 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h4 class="page-title">Dashboard</h4>
+{% block extrahead %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack/dist/gridstack.min.css">
+<style>
+  /* GridStack theme overrides */
+  .grid-stack { background: transparent; }
+  .grid-stack-item-content {
+    border-radius: 6px;
+    overflow: auto;
+  }
+  /* Resize handle — subtle blue dot in bottom-right corner */
+  .grid-stack-item > .ui-resizable-se {
+    background: #6aa9e3;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    bottom: 6px;
+    right: 6px;
+    opacity: 0.5;
+  }
+  .grid-stack-item:hover > .ui-resizable-se { opacity: 1; }
+  /* Drag placeholder */
+  .grid-stack-placeholder > .placeholder-content {
+    background: rgba(106,169,227,0.08);
+    border: 1px dashed #6aa9e3;
+    border-radius: 6px;
+  }
+</style>
+{% endblock %}
 
-<!-- Stats row -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3">
-    <div class="card p-3 text-center">
-      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
-        {{ stats.total_roasts or 0 }}
-      </div>
-      <div class="section-label mb-0">Total Roasts</div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card p-3 text-center">
-      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
-        {{ stats.avg_loss_pct or '—' }}{% if stats.avg_loss_pct %}%{% endif %}
-      </div>
-      <div class="section-label mb-0">Avg Weight Loss</div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card p-3 text-center">
-      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
-        {% if stats.total_weight_roasted %}
-          {{ "%.0f"|format(stats.total_weight_roasted) }}g
-        {% else %}—{% endif %}
-      </div>
-      <div class="section-label mb-0">Total Weight Roasted</div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card p-3 text-center">
-      <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
-        {% if total_inventory_value > 0 %}
-          ${{ "%.2f"|format(total_inventory_value) }}
-        {% else %}—{% endif %}
-      </div>
-      <div class="section-label mb-0">Inventory Value</div>
-    </div>
-  </div>
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="page-title mb-0">Dashboard</h4>
+  <button id="resetLayout" class="btn btn-sm btn-outline-secondary">Reset Layout</button>
 </div>
 
-<!-- Low inventory alert -->
+<!-- Low inventory alert (outside grid) -->
 {% set low_beans = inventory | selectattr('inventory_g', 'lt', low_threshold) | list %}
 {% if low_beans %}
-<div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 mb-4" role="alert">
+<div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 mb-3" role="alert">
   <span style="font-size:1.1rem">&#9888;</span>
   <div>
     <strong>Low inventory</strong> —
@@ -59,96 +51,178 @@
 </div>
 {% endif %}
 
-<!-- Main content -->
-<div class="row g-4">
+<!-- GridStack dashboard -->
+<div class="grid-stack">
 
-  <!-- Recent Roasts -->
-  <div class="col-12 col-lg-7">
-    <div class="card p-4 h-100">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <p class="section-label mb-0">Recent Roasts</p>
-        <a href="/history" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">View all →</a>
+  <!-- Total Roasts -->
+  <div class="grid-stack-item" gs-id="stats-roasts" gs-x="0" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
+    <div class="grid-stack-item-content">
+      <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
+        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">{{ stats.total_roasts or 0 }}</div>
+        <div class="section-label mb-0">Total Roasts</div>
       </div>
-      {% if recent_roasts %}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Date</th>
-              <th>Bean</th>
-              <th>Start (g)</th>
-              <th>End (g)</th>
-              <th>Loss</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for roast in recent_roasts %}
-            <tr>
-              <td style="white-space:nowrap">{{ roast.date }}</td>
-              <td>{{ roast.bean_name }}</td>
-              <td>{{ roast.start_weight_g }}</td>
-              <td>
-                {% if roast.end_weight_g %}
-                  {{ roast.end_weight_g }}
-                {% else %}
-                  <span class="badge" style="background-color:rgba(106,169,227,0.15);color:#6aa9e3;font-weight:500">In Progress</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if roast.weight_loss_pct %}
-                  <span style="color:#6aa9e3;font-weight:500">{{ roast.weight_loss_pct }}%</span>
-                  <span class="text-muted" style="font-size:0.8rem"> / {{ roast.weight_loss_g }}g</span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <p class="text-muted mb-0">No roasts logged yet. <a href="/roast">Log your first roast →</a></p>
-      {% endif %}
     </div>
   </div>
 
-  <!-- Inventory -->
-  <div class="col-12 col-lg-5">
-    <div class="card p-4 h-100">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <p class="section-label mb-0">Bean Inventory</p>
-        <a href="/beans" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">Manage →</a>
-      </div>
-      {% if inventory %}
-      <div class="d-flex flex-column gap-2">
-        {% for bean in inventory %}
-        {% set pct = [[(bean.inventory_g / low_threshold * 100), 0] | max, 100] | min %}
-        <div>
-          <div class="d-flex justify-content-between align-items-baseline mb-1">
-            <span style="font-size:0.875rem;font-weight:500">
-              {{ bean.name }}
-              {% if bean.inventory_g < low_threshold %}
-                <span style="color:#ffc107;font-size:0.75rem">&#9888;</span>
-              {% endif %}
-            </span>
-            <span style="font-size:0.8rem;color:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}rgba(220,225,231,0.6){% endif %}">
-              {{ "%.0f"|format(bean.inventory_g) }}g
-            </span>
-          </div>
-          <div style="height:5px;background:#25384f;border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:{{ pct }}%;border-radius:3px;
-                        background:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}#6aa9e3{% endif %};
-                        transition:width 0.3s"></div>
-          </div>
+  <!-- Avg Weight Loss -->
+  <div class="grid-stack-item" gs-id="stats-loss" gs-x="3" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
+    <div class="grid-stack-item-content">
+      <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
+        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+          {{ stats.avg_loss_pct or '—' }}{% if stats.avg_loss_pct %}%{% endif %}
         </div>
-        {% endfor %}
+        <div class="section-label mb-0">Avg Weight Loss</div>
       </div>
-      {% else %}
-      <p class="text-muted mb-0">No beans added yet. <a href="/beans">Add beans →</a></p>
-      {% endif %}
+    </div>
+  </div>
+
+  <!-- Total Weight Roasted -->
+  <div class="grid-stack-item" gs-id="stats-weight" gs-x="6" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
+    <div class="grid-stack-item-content">
+      <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
+        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+          {% if stats.total_weight_roasted %}{{ "%.0f"|format(stats.total_weight_roasted) }}g{% else %}—{% endif %}
+        </div>
+        <div class="section-label mb-0">Total Weight Roasted</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inventory Value -->
+  <div class="grid-stack-item" gs-id="stats-value" gs-x="9" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
+    <div class="grid-stack-item-content">
+      <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
+        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+          {% if total_inventory_value > 0 %}${{ "%.2f"|format(total_inventory_value) }}{% else %}—{% endif %}
+        </div>
+        <div class="section-label mb-0">Inventory Value</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Roasts -->
+  <div class="grid-stack-item" gs-id="recent-roasts" gs-x="0" gs-y="2" gs-w="7" gs-h="9" gs-min-w="4" gs-min-h="4">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="section-label mb-0">Recent Roasts</p>
+          <a href="/history" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">View all →</a>
+        </div>
+        {% if recent_roasts %}
+        <div class="table-responsive" style="overflow-y:auto;flex:1">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Bean</th>
+                <th>Start (g)</th>
+                <th>End (g)</th>
+                <th>Loss</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for roast in recent_roasts %}
+              <tr>
+                <td style="white-space:nowrap">{{ roast.date }}</td>
+                <td>{{ roast.bean_name }}</td>
+                <td>{{ roast.start_weight_g }}</td>
+                <td>
+                  {% if roast.end_weight_g %}{{ roast.end_weight_g }}
+                  {% else %}<span class="badge" style="background-color:rgba(106,169,227,0.15);color:#6aa9e3;font-weight:500">In Progress</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if roast.weight_loss_pct %}
+                    <span style="color:#6aa9e3;font-weight:500">{{ roast.weight_loss_pct }}%</span>
+                    <span class="text-muted" style="font-size:0.8rem"> / {{ roast.weight_loss_g }}g</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No roasts logged yet. <a href="/roast">Log your first roast →</a></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Bean Inventory -->
+  <div class="grid-stack-item" gs-id="bean-inventory" gs-x="7" gs-y="2" gs-w="5" gs-h="9" gs-min-w="3" gs-min-h="4">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="section-label mb-0">Bean Inventory</p>
+          <a href="/beans" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">Manage →</a>
+        </div>
+        {% if inventory %}
+        <div class="d-flex flex-column gap-2" style="overflow-y:auto;flex:1">
+          {% for bean in inventory %}
+          {% set pct = [[(bean.inventory_g / low_threshold * 100), 0] | max, 100] | min %}
+          <div>
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+              <span style="font-size:0.875rem;font-weight:500">
+                {{ bean.name }}
+                {% if bean.inventory_g < low_threshold %}
+                  <span style="color:#ffc107;font-size:0.75rem">&#9888;</span>
+                {% endif %}
+              </span>
+              <span style="font-size:0.8rem;color:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}rgba(220,225,231,0.6){% endif %}">
+                {{ "%.0f"|format(bean.inventory_g) }}g
+              </span>
+            </div>
+            <div style="height:5px;background:#25384f;border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:{{ pct }}%;border-radius:3px;
+                          background:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}#6aa9e3{% endif %};
+                          transition:width 0.3s"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No beans added yet. <a href="/beans">Add beans →</a></p>
+        {% endif %}
+      </div>
     </div>
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/gridstack/dist/gridstack-all.js"></script>
+<script>
+  const STORAGE_KEY = 'roastapp-dashboard-layout';
+
+  const grid = GridStack.init({
+    cellHeight: 70,
+    margin: 6,
+    animate: true,
+    float: false,
+    resizable: { handles: 'se' },
+  });
+
+  // Restore saved layout
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      grid.load(JSON.parse(saved), false);
+    } catch (e) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+
+  // Save on move or resize
+  grid.on('change', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false)));
+  });
+
+  // Reset to default
+  document.getElementById('resetLayout').addEventListener('click', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  });
+</script>
 {% endblock %}
