@@ -116,8 +116,8 @@ def init_db():
             date            TEXT    NOT NULL,
             bean_id         INTEGER NOT NULL,
             start_weight_g  REAL    NOT NULL,
-            end_weight_g    REAL    NOT NULL,
-            weight_loss_g   REAL    NOT NULL,
+            end_weight_g    REAL,
+            weight_loss_g   REAL,
             FOREIGN KEY (bean_id) REFERENCES beans(id)
         )
     ''')
@@ -148,6 +148,29 @@ def init_db():
         if col not in existing_roast_cols:
             conn.execute(f'ALTER TABLE roasts ADD COLUMN {col} {defn}')
             conn.commit()
+
+    # Migrate end_weight_g / weight_loss_g to allow NULL (SQLite requires table recreation)
+    col_info = {row[1]: row[3] for row in conn.execute('PRAGMA table_info(roasts)').fetchall()}
+    if col_info.get('end_weight_g') == 1:  # notnull = 1 means NOT NULL constraint
+        conn.execute('''
+            CREATE TABLE roasts_new (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                date            TEXT    NOT NULL,
+                bean_id         INTEGER NOT NULL,
+                start_weight_g  REAL    NOT NULL,
+                end_weight_g    REAL,
+                weight_loss_g   REAL,
+                first_crack_secs INTEGER DEFAULT NULL,
+                c_button_used   INTEGER NOT NULL DEFAULT 0,
+                plus_presses    INTEGER NOT NULL DEFAULT 0,
+                minus_presses   INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (bean_id) REFERENCES beans(id)
+            )
+        ''')
+        conn.execute('INSERT INTO roasts_new SELECT * FROM roasts')
+        conn.execute('DROP TABLE roasts')
+        conn.execute('ALTER TABLE roasts_new RENAME TO roasts')
+        conn.commit()
 
     conn.close()
 
@@ -213,19 +236,30 @@ def add_roast():
     bean_id  = request.form['bean_id']
     try:
         start = float(request.form['start_weight_g'])
-        end   = float(request.form['end_weight_g'])
     except ValueError:
-        flash('Invalid weight values.', 'danger')
+        flash('Invalid start weight.', 'danger')
         return redirect(url_for('roast_page'))
 
-    if start <= 0 or end <= 0:
-        flash('Weights must be greater than zero.', 'danger')
-        return redirect(url_for('roast_page'))
-    if end >= start:
-        flash('End weight must be less than start weight.', 'danger')
+    if start <= 0:
+        flash('Start weight must be greater than zero.', 'danger')
         return redirect(url_for('roast_page'))
 
-    loss = round(start - end, 1)
+    end_str = request.form.get('end_weight_g', '').strip()
+    end, loss = None, None
+    if end_str:
+        try:
+            end = float(end_str)
+        except ValueError:
+            flash('Invalid end weight.', 'danger')
+            return redirect(url_for('roast_page'))
+        if end <= 0:
+            flash('End weight must be greater than zero.', 'danger')
+            return redirect(url_for('roast_page'))
+        if end >= start:
+            flash('End weight must be less than start weight.', 'danger')
+            return redirect(url_for('roast_page'))
+        loss = round(start - end, 1)
+
     c_used       = 1 if request.form.get('c_button_used') else 0
     first_crack  = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
     plus_presses = int(request.form.get('plus_presses',  0) or 0)
@@ -302,19 +336,29 @@ def edit_roast(roast_id):
     new_bean_id = int(request.form['bean_id'])
     try:
         new_start = float(request.form['start_weight_g'])
-        new_end   = float(request.form['end_weight_g'])
     except ValueError:
-        flash('Invalid weight values.', 'danger')
+        flash('Invalid start weight.', 'danger')
         return redirect(url_for('history_page'))
 
-    if new_start <= 0 or new_end <= 0:
-        flash('Weights must be greater than zero.', 'danger')
-        return redirect(url_for('history_page'))
-    if new_end >= new_start:
-        flash('End weight must be less than start weight.', 'danger')
+    if new_start <= 0:
+        flash('Start weight must be greater than zero.', 'danger')
         return redirect(url_for('history_page'))
 
-    new_loss      = round(new_start - new_end, 1)
+    end_str = request.form.get('end_weight_g', '').strip()
+    new_end, new_loss = None, None
+    if end_str:
+        try:
+            new_end = float(end_str)
+        except ValueError:
+            flash('Invalid end weight.', 'danger')
+            return redirect(url_for('history_page'))
+        if new_end <= 0:
+            flash('End weight must be greater than zero.', 'danger')
+            return redirect(url_for('history_page'))
+        if new_end >= new_start:
+            flash('End weight must be less than start weight.', 'danger')
+            return redirect(url_for('history_page'))
+        new_loss = round(new_start - new_end, 1)
     c_used        = 1 if request.form.get('c_button_used') else 0
     first_crack   = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
     plus_presses  = int(request.form.get('plus_presses',  0) or 0)
@@ -564,6 +608,7 @@ def chart_data():
                ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct
         FROM roasts r
         JOIN beans b ON r.bean_id = b.id
+        WHERE r.end_weight_g IS NOT NULL
         ORDER BY r.date ASC, r.id ASC
     ''').fetchall()
     db.close()

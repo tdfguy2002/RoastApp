@@ -66,9 +66,15 @@
               <td>{{ roast.date }}</td>
               <td>{{ roast.bean_name }}</td>
               <td>{{ roast.start_weight_g }}</td>
-              <td>{{ roast.end_weight_g }}</td>
-              <td>{{ roast.weight_loss_g }}</td>
-              <td>{{ roast.weight_loss_pct }}%</td>
+              <td>
+                {% if roast.end_weight_g %}
+                  {{ roast.end_weight_g }}
+                {% else %}
+                  <span class="badge" style="background-color:rgba(106,169,227,0.15);color:#6aa9e3;font-weight:500">In Progress</span>
+                {% endif %}
+              </td>
+              <td>{{ roast.weight_loss_g or '—' }}</td>
+              <td>{% if roast.weight_loss_pct %}{{ roast.weight_loss_pct }}%{% else %}—{% endif %}</td>
               <td>{{ roast.first_crack_fmt or '—' }}</td>
               <td>{{ roast.total_roast_time or '—' }}</td>
               <td class="text-end d-flex gap-2 justify-content-end">
@@ -162,7 +168,8 @@
           <div class="mb-3">
             <label class="form-label">End Weight (g)</label>
             <input type="number" name="end_weight_g" id="editRoastEnd" class="form-control"
-                   step="0.1" min="1" required>
+                   step="0.1" min="1">
+            <div class="form-text">Leave blank if roast is still in progress</div>
           </div>
           <hr style="border-color:#25384f">
           <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
