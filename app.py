@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 import sqlite3
-from datetime import date
+import csv
+import io
+from datetime import date, datetime
 
 app = Flask(__name__)
 app.secret_key = 'roastapp-secret-key'
@@ -266,6 +268,117 @@ def delete_bean(bean_id):
     conn.commit()
     conn.close()
     return redirect(url_for('beans_page'))
+
+
+DEFAULT_IMPORT_BEAN = 'Espresso Monkey'
+
+
+@app.route('/roasts/import/preview', methods=['POST'])
+def import_preview():
+    file = request.files.get('csv_file')
+    if not file or file.filename == '':
+        flash('Please select a CSV file.', 'danger')
+        return redirect(url_for('history_page'))
+
+    db = get_db()
+    beans_list = db.execute('SELECT * FROM beans ORDER BY name').fetchall()
+    db.close()
+
+    # Build case-insensitive name → bean lookup
+    bean_lookup = {b['name'].strip().lower(): dict(b) for b in beans_list}
+
+    content = file.read().decode('utf-8', errors='replace')
+    rows = []
+    for line_num, row in enumerate(csv.reader(io.StringIO(content)), start=1):
+        if not any(cell.strip() for cell in row):
+            continue  # skip blank lines
+
+        entry = {'line': line_num, 'raw': ','.join(row), 'errors': [],
+                 'date': '', 'start': None, 'end': None, 'loss': None, 'loss_pct': None,
+                 'bean_name': '', 'bean_id': None}
+
+        # Column 7 → bean name; default to DEFAULT_IMPORT_BEAN if absent/empty
+        raw_bean = row[7].strip() if len(row) > 7 else ''
+        bean_name = raw_bean if raw_bean else DEFAULT_IMPORT_BEAN
+        entry['bean_name'] = bean_name
+        matched = bean_lookup.get(bean_name.lower())
+        if matched:
+            entry['bean_id'] = matched['id']
+        else:
+            entry['errors'].append(f'Bean "{bean_name}" not found — add it in Beans first')
+
+        # Column 1 → date (MM/DD/YYYY)
+        try:
+            entry['date'] = datetime.strptime(row[1].strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
+        except (ValueError, IndexError):
+            entry['errors'].append(f'Invalid date "{row[1].strip() if len(row) > 1 else ""}" — expected MM/DD/YYYY')
+
+        # Column 2 → start weight
+        try:
+            start = float(row[2].strip())
+            if start <= 0:
+                entry['errors'].append('Start weight must be > 0')
+            else:
+                entry['start'] = start
+        except (ValueError, IndexError):
+            entry['errors'].append(f'Invalid start weight "{row[2].strip() if len(row) > 2 else ""}"')
+
+        # Column 3 → end weight
+        try:
+            end = float(row[3].strip())
+            if end <= 0:
+                entry['errors'].append('End weight must be > 0')
+            else:
+                entry['end'] = end
+        except (ValueError, IndexError):
+            entry['errors'].append(f'Invalid end weight "{row[3].strip() if len(row) > 3 else ""}"')
+
+        if entry['start'] and entry['end']:
+            if entry['end'] >= entry['start']:
+                entry['errors'].append('End weight must be less than start weight')
+            elif not entry['errors']:
+                entry['loss'] = round(entry['start'] - entry['end'], 1)
+                entry['loss_pct'] = round(entry['loss'] / entry['start'] * 100, 1)
+
+        rows.append(entry)
+
+    valid = [r for r in rows if not r['errors']]
+    invalid = [r for r in rows if r['errors']]
+    return render_template('import_preview.html',
+                           rows=rows, valid=valid, invalid=invalid,
+                           beans=beans_list)
+
+
+@app.route('/roasts/import/confirm', methods=['POST'])
+def import_confirm():
+    dates    = request.form.getlist('date')
+    starts   = request.form.getlist('start')
+    ends     = request.form.getlist('end')
+    bean_ids = request.form.getlist('bean_id')
+
+    if not dates:
+        flash('No valid rows to import.', 'warning')
+        return redirect(url_for('history_page'))
+
+    conn = get_db()
+    count = 0
+    for date_val, start_val, end_val, bean_id in zip(dates, starts, ends, bean_ids):
+        try:
+            start = float(start_val)
+            end   = float(end_val)
+            loss  = round(start - end, 1)
+            conn.execute(
+                'INSERT INTO roasts (date, bean_id, start_weight_g, end_weight_g, weight_loss_g) '
+                'VALUES (?, ?, ?, ?, ?)',
+                (date_val, bean_id, start, end, loss)
+            )
+            count += 1
+        except (ValueError, Exception):
+            continue
+    conn.commit()
+    conn.close()
+    flash(f'Imported {count} roast(s) successfully.', 'success')
+    return redirect(url_for('history_page'))
 
 
 @app.route('/api/chart-data')

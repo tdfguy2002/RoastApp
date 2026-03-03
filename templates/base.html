@@ -1,28 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RoastApp</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    /* ── Palette from the roasting image ──────────────────────────────
-       espresso-dark  #1a0800   (deep background)
-       ember-brown    #7a3008   (bean body)
-       fire-orange    #c05808   (glow / CTA)
-       amber-gold     #e8a020   (flame mid)
-       bright-gold    #f5b010   (flame tips / highlights)
-       parchment      #f7eddf   (page background)
-    ───────────────────────────────────────────────────────────────── */
+    /* ── Palette ───────────────────────────────────────────────────────
+       espresso-dark  #080200   (sidebar)
+       deep-roast     #0f0500   (page background)
+       card-dark      #1e0e04   (card surfaces)
+       fire-orange    #c05808   (buttons, active nav, badges)
+       amber-gold     #e8a020   (sidebar nav links)
+       bright-gold    #f5b010   (brand, page titles)
+       warm-cream     #e8d0a8   (body text)
+    ────────────────────────────────────────────────────────────────── */
+
+    /* Bootstrap dark theme overrides */
+    [data-bs-theme="dark"] {
+      --bs-body-bg:           #0f0500;
+      --bs-body-color:        #e8d0a8;
+      --bs-card-bg:           #1e0e04;
+      --bs-card-border-color: transparent;
+      --bs-input-bg:          #2a1400;
+      --bs-border-color:      #3a1a08;
+      --bs-secondary-color:   #9a7050;
+      --bs-table-bg:          #1e0e04;
+      --bs-table-striped-bg:  #260f04;
+      --bs-table-hover-bg:    #2e1406;
+    }
+
     html, body {
       height: 100%;
       margin: 0;
-      background-color: #f7eddf;
     }
 
     /* ── Sidebar (desktop) ── */
     .sidebar {
-      background-color: #1a0800;
+      background-color: #080200;
     }
     @media (min-width: 992px) {
       .sidebar {
@@ -74,7 +89,7 @@
 
     /* ── Mobile top bar ── */
     .mobile-topbar {
-      background-color: #1a0800;
+      background-color: #080200;
       padding: 0.75rem 1rem;
       display: flex;
       align-items: center;
@@ -106,7 +121,7 @@
     }
     .card {
       border: none;
-      box-shadow: 0 1px 8px rgba(26,8,0,0.14);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     }
     .btn-coffee {
       background-color: #c05808;
@@ -114,11 +129,11 @@
       border: none;
     }
     .btn-coffee:hover {
-      background-color: #1a0800;
-      color: #fff;
+      background-color: #e8a020;
+      color: #0f0500;
     }
     h4.page-title {
-      color: #3d1800;
+      color: #f5b010;
       font-weight: 700;
       margin-bottom: 1.5rem;
     }
@@ -126,9 +141,35 @@
       font-size: 0.72rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #7a5030;
+      color: #9a7050;
       font-weight: 700;
       margin-bottom: 0.75rem;
+    }
+
+    /* Inputs and selects */
+    .form-control, .form-select {
+      background-color: #2a1400;
+      border-color: #3a1a08;
+      color: #e8d0a8;
+    }
+    .form-control:focus, .form-select:focus {
+      background-color: #2a1400;
+      border-color: #c05808;
+      color: #e8d0a8;
+      box-shadow: 0 0 0 0.2rem rgba(192,88,8,0.25);
+    }
+    .form-control::placeholder {
+      color: #6a4828;
+    }
+
+    /* Table tweaks */
+    .table-light th {
+      background-color: #2a1400 !important;
+      color: #e8a020;
+      border-color: #3a1a08;
+    }
+    .table {
+      --bs-table-border-color: #3a1a08;
     }
   </style>
 </head>
@@ -144,7 +185,7 @@
 
   <!-- Sidebar — offcanvas on mobile, fixed on desktop -->
   <nav class="offcanvas-lg offcanvas-start sidebar" id="sidebar" tabindex="-1">
-    <div class="offcanvas-header d-lg-none" style="background-color:#1a0800;padding:1rem">
+    <div class="offcanvas-header d-lg-none" style="background-color:#080200;padding:1rem">
       <span class="brand mb-0">RoastApp</span>
       <button type="button" class="btn-close btn-close-white"
               data-bs-dismiss="offcanvas" data-bs-target="#sidebar"></button>

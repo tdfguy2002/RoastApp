@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h4 class="page-title">Roast History</h4>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="page-title mb-0">Roast History</h4>
+  <button class="btn btn-coffee btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+    Import CSV
+  </button>
+</div>
 
 <div class="row g-4">
 
@@ -10,6 +15,10 @@
     <div class="card p-4">
       <p class="section-label">Weight Loss Over Time</p>
       {% if roasts %}
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div id="beanToggles" class="d-flex flex-wrap gap-2"></div>
+        <button id="resetZoom" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;white-space:nowrap">Reset Zoom</button>
+      </div>
       <div style="position:relative;height:360px">
         <canvas id="roastChart"></canvas>
       </div>
@@ -22,9 +31,15 @@
   <!-- History Table -->
   <div class="col-12">
     <div class="card p-4">
-      <p class="section-label">All Roasts</p>
+      <p class="section-label">All Roasts
+        {% if roasts %}
+        <span class="badge ms-2" style="background-color:#c05808;font-size:0.75rem;vertical-align:middle">
+          {{ roasts|length }}
+        </span>
+        {% endif %}
+      </p>
       {% if roasts %}
-      <div class="table-responsive">
+      <div class="table-responsive" style="max-height:400px;overflow-y:auto">
         <table class="table table-hover align-middle">
           <thead class="table-light">
             <tr>
@@ -74,12 +89,41 @@
 
 </div>
 
+<!-- Import CSV Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="/roasts/import/preview" method="post" enctype="multipart/form-data">
+        <div class="modal-header" style="background-color:#080200">
+          <h5 class="modal-title text-white">Import CSV</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted" style="font-size:0.85rem">
+            Expected columns: <code>[ignored], date (MM/DD/YYYY), start&nbsp;weight&nbsp;(g), end&nbsp;weight&nbsp;(g), [ignored×3], bean&nbsp;name</code><br>
+            Bean name is read from column 8. Rows without a bean name default to <strong>Espresso Monkey</strong>.<br>
+            A preview will be shown before anything is saved.
+          </p>
+          <div class="mb-3">
+            <label class="form-label">CSV File</label>
+            <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-coffee">Preview Import</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Edit Roast Modal -->
 <div class="modal fade" id="editRoastModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <form id="editRoastForm" method="post">
-        <div class="modal-header" style="background-color:#1a0800">
+        <div class="modal-header" style="background-color:#080200">
           <h5 class="modal-title text-white">Edit Roast</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -121,6 +165,8 @@
 {% if roasts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script>
 (async function () {
   const res = await fetch('/api/chart-data');
@@ -160,14 +206,18 @@
   const yMin = Math.max(0, parseFloat((dataMin - margin).toFixed(1)));
   const yMax = parseFloat((dataMax + margin).toFixed(1));
 
-  new Chart(document.getElementById('roastChart'), {
+  const chart = new Chart(document.getElementById('roastChart'), {
     type: 'scatter',
     data: { datasets: Object.values(beanMap) },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top' },
+        legend: { display: false },
+        zoom: {
+          pan:  { enabled: true, mode: 'xy' },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' },
+        },
         tooltip: {
           callbacks: {
             title(contexts) {
@@ -189,16 +239,50 @@
         x: {
           type: 'time',
           time: { unit: 'day', displayFormats: { day: 'MMM d, yyyy' } },
-          title: { display: true, text: 'Roast Date' }
+          title: { display: true, text: 'Roast Date', color: '#9a7050' },
+          ticks: { color: '#e8d0a8' },
+          grid:  { color: 'rgba(232,160,32,0.1)' }
         },
         y: {
           min: yMin,
           max: yMax,
-          title: { display: true, text: 'Weight Loss (%)' },
-          ticks: { callback: val => val + '%' }
+          title: { display: true, text: 'Weight Loss (%)', color: '#9a7050' },
+          ticks: { color: '#e8d0a8', callback: val => (+val).toFixed(1) + '%' },
+          grid:  { color: 'rgba(232,160,32,0.1)' }
         }
       }
     }
+  });
+
+  document.getElementById('resetZoom').addEventListener('click', () => chart.resetZoom());
+
+  // Build toggle pills
+  const togglesEl = document.getElementById('beanToggles');
+  chart.data.datasets.forEach((ds, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = ds.label;
+    btn.dataset.index = i;
+    btn.style.cssText = `
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      border: 2px solid ${ds.borderColor};
+      background-color: ${ds.borderColor};
+      color: #fff;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: opacity 0.15s, background-color 0.15s;
+    `;
+    btn.addEventListener('click', () => {
+      const meta = chart.getDatasetMeta(i);
+      meta.hidden = !meta.hidden;
+      const hidden = meta.hidden;
+      btn.style.backgroundColor = hidden ? 'transparent' : ds.borderColor;
+      btn.style.color = hidden ? ds.borderColor : '#fff';
+      btn.style.opacity = hidden ? '0.5' : '1';
+      chart.update();
+    });
+    togglesEl.appendChild(btn);
   });
 })();
 </script>

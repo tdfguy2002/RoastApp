@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h4 class="page-title">Import Preview</h4>
+
+<div class="row g-4">
+
+  <!-- Summary bar -->
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="section-label mb-2">Summary</p>
+      <div class="d-flex flex-wrap gap-3 align-items-center">
+        <span class="badge" style="background-color:#2a6a2a;font-size:0.85rem">
+          {{ valid|length }} row{{ 's' if valid|length != 1 }} ready to import
+        </span>
+        {% if invalid %}
+        <span class="badge" style="background-color:#7a1a08;font-size:0.85rem">
+          {{ invalid|length }} row{{ 's' if invalid|length != 1 }} with errors (will be skipped)
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview table -->
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="section-label">Rows</p>
+      <div class="table-responsive" style="max-height:480px;overflow-y:auto">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:3rem">#</th>
+              <th>Date</th>
+              <th>Bean</th>
+              <th>Start (g)</th>
+              <th>End (g)</th>
+              <th>Loss (g)</th>
+              <th>Loss (%)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr style="{% if row.errors %}opacity:0.6{% endif %}">
+              <td class="text-muted" style="font-size:0.8rem">{{ row.line }}</td>
+              {% if row.errors %}
+                <td colspan="6" style="font-size:0.82rem;color:#e8a020">
+                  {{ row.raw[:80] }}{% if row.raw|length > 80 %}…{% endif %}
+                  <div class="mt-1">
+                    {% for e in row.errors %}
+                    <span class="badge" style="background-color:#7a1a08;margin-right:4px">{{ e }}</span>
+                    {% endfor %}
+                  </div>
+                </td>
+              {% else %}
+                <td>{{ row.date }}</td>
+                <td style="color:#f5b010">{{ row.bean_name }}</td>
+                <td>{{ row.start }}</td>
+                <td>{{ row.end }}</td>
+                <td>{{ row.loss }}</td>
+                <td>{{ row.loss_pct }}%</td>
+              {% endif %}
+              <td>
+                {% if row.errors %}
+                  <span style="color:#c05808">&#10007; Skip</span>
+                {% else %}
+                  <span style="color:#3a9a3a">&#10003; Import</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="col-12 d-flex gap-3">
+    {% if valid %}
+    <form action="/roasts/import/confirm" method="post">
+      {% for row in valid %}
+      <input type="hidden" name="date"    value="{{ row.date }}">
+      <input type="hidden" name="start"   value="{{ row.start }}">
+      <input type="hidden" name="end"     value="{{ row.end }}">
+      <input type="hidden" name="bean_id" value="{{ row.bean_id }}">
+      {% endfor %}
+      <button type="submit" class="btn btn-coffee">
+        Confirm — Import {{ valid|length }} roast{{ 's' if valid|length != 1 }}
+      </button>
+    </form>
+    {% endif %}
+    <a href="/history" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+
+</div>
+{% endblock %}
