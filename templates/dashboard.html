@@ -1,33 +1,5 @@
 {% extends "base.html" %}
 
-{% block extrahead %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack/dist/gridstack.min.css">
-<style>
-  /* GridStack theme overrides */
-  .grid-stack { background: transparent; }
-  .grid-stack-item-content {
-    border-radius: 6px;
-    overflow: auto;
-  }
-  /* Resize handle — subtle blue dot in bottom-right corner */
-  .grid-stack-item > .ui-resizable-se {
-    background: #6aa9e3;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    bottom: 6px;
-    right: 6px;
-    opacity: 0.5;
-  }
-  .grid-stack-item:hover > .ui-resizable-se { opacity: 1; }
-  /* Drag placeholder */
-  .grid-stack-placeholder > .placeholder-content {
-    background: rgba(106,169,227,0.08);
-    border: 1px dashed #6aa9e3;
-    border-radius: 6px;
-  }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -192,7 +164,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/gridstack/dist/gridstack-all.js"></script>
 <script>
   const STORAGE_KEY = 'roastapp-dashboard-layout';
 

@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h4 class="page-title">Beans</h4>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="page-title mb-0">Beans</h4>
+  <button id="resetLayout" class="btn btn-sm btn-outline-secondary">Reset Layout</button>
+</div>
 
 {% set low_beans = beans | selectattr('inventory_g', 'lt', low_threshold) | list %}
 {% if low_beans %}
-<div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 mb-4" role="alert">
+<div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 mb-3" role="alert">
   <span style="font-size:1.1rem">&#9888;</span>
   <div>
     <strong>Low inventory</strong> —
@@ -18,169 +21,175 @@
 </div>
 {% endif %}
 
-<div class="row g-4">
+<div class="grid-stack">
 
   <!-- Add Bean Form -->
-  <div class="col-12 col-lg-5">
-    <div class="card p-4">
-      <p class="section-label">Add New Bean</p>
-      <form action="/beans" method="post">
-        <div class="mb-3">
-          <label class="form-label">Bean Name</label>
-          <input type="text" name="name" class="form-control"
-                 placeholder="e.g. Ethiopia Yirgacheffe" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Processing Type</label>
-          <select name="process_type" class="form-select" required>
-            {% for pt in process_types %}
-            <option value="{{ pt }}">{{ pt }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Inventory</label>
-          <div class="input-group">
-            <input type="number" name="inventory_g" class="form-control"
-                   step="0.01" min="0" placeholder="0" value="0" required>
-            <select name="inventory_unit" class="form-select" style="max-width:80px">
-              <option value="g">g</option>
-              <option value="lbs">lbs</option>
+  <div class="grid-stack-item" gs-id="add-bean" gs-x="0" gs-y="0" gs-w="5" gs-h="7" gs-min-w="3" gs-min-h="5">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100">
+        <p class="section-label">Add New Bean</p>
+        <form action="/beans" method="post">
+          <div class="mb-3">
+            <label class="form-label">Bean Name</label>
+            <input type="text" name="name" class="form-control"
+                   placeholder="e.g. Ethiopia Yirgacheffe" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Processing Type</label>
+            <select name="process_type" class="form-select" required>
+              {% for pt in process_types %}
+              <option value="{{ pt }}">{{ pt }}</option>
+              {% endfor %}
             </select>
           </div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Purchase Price</label>
-          <div class="input-group">
-            <span class="input-group-text">$</span>
-            <input type="number" name="cost_price" class="form-control"
-                   step="any" min="0" placeholder="0.00" value="0">
-            <select name="cost_unit" class="form-select" style="max-width:100px">
-              <option value="per_lb">per lb</option>
-              <option value="per_kg">per kg</option>
-              <option value="per_g">per g</option>
-            </select>
+          <div class="mb-3">
+            <label class="form-label">Inventory</label>
+            <div class="input-group">
+              <input type="number" name="inventory_g" class="form-control"
+                     step="0.01" min="0" placeholder="0" value="0" required>
+              <select name="inventory_unit" class="form-select" style="max-width:80px">
+                <option value="g">g</option>
+                <option value="lbs">lbs</option>
+              </select>
+            </div>
           </div>
-        </div>
-        <button type="submit" class="btn btn-coffee w-100">Add Bean</button>
-      </form>
+          <div class="mb-3">
+            <label class="form-label">Purchase Price</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" name="cost_price" class="form-control"
+                     step="any" min="0" placeholder="0.00" value="0">
+              <select name="cost_unit" class="form-select" style="max-width:100px">
+                <option value="per_lb">per lb</option>
+                <option value="per_kg">per kg</option>
+                <option value="per_g">per g</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-coffee w-100">Add Bean</button>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- Low Inventory Threshold -->
-  <div class="col-12 col-lg-5">
-    <div class="card p-4">
-      <p class="section-label">Low Inventory Alert</p>
-      <form action="/settings/low-inventory" method="post" class="d-flex gap-2 align-items-end">
-        <div class="flex-grow-1">
-          <label class="form-label">Alert threshold</label>
-          <div class="input-group">
-            <input type="number" name="low_inventory_g" class="form-control"
-                   step="any" min="0" value="{{ "%.0f"|format(low_threshold) }}"required>
-            <span class="input-group-text">g</span>
+  <div class="grid-stack-item" gs-id="low-inventory" gs-x="5" gs-y="0" gs-w="4" gs-h="3" gs-min-w="3" gs-min-h="2">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100">
+        <p class="section-label">Low Inventory Alert</p>
+        <form action="/settings/low-inventory" method="post" class="d-flex gap-2 align-items-end">
+          <div class="flex-grow-1">
+            <label class="form-label">Alert threshold</label>
+            <div class="input-group">
+              <input type="number" name="low_inventory_g" class="form-control"
+                     step="any" min="0" value="{{ "%.0f"|format(low_threshold) }}" required>
+              <span class="input-group-text">g</span>
+            </div>
           </div>
-        </div>
-        <button type="submit" class="btn btn-coffee">Save</button>
-      </form>
-      <div class="form-text mt-2">Beans with inventory below this amount will be flagged.</div>
+          <button type="submit" class="btn btn-coffee">Save</button>
+        </form>
+        <div class="form-text mt-2">Beans with inventory below this amount will be flagged.</div>
+      </div>
     </div>
   </div>
 
   <!-- Beans List -->
-  <div class="col-12">
-    <div class="card p-4">
-      <p class="section-label">Bean Inventory</p>
-      {% if beans %}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Name</th>
-              <th>Process</th>
-              <th>Inventory (g)</th>
-              <th>Cost/g</th>
-              <th>Stock Value</th>
-              <th>Roasts</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for bean in beans %}
-            <tr {% if bean.inventory_g < low_threshold %}style="background-color:rgba(255,193,7,0.07)"{% endif %}>
-              <td>{{ bean.name }}</td>
-              <td>
-                <span class="badge rounded-pill"
-                      style="background-color:#6aa9e3;color:#040a11;font-weight:500">
-                  {{ bean.process_type }}
-                </span>
-              </td>
-              <td>
-                {{ "%.1f"|format(bean.inventory_g) }} g
-                {% if bean.inventory_g < low_threshold %}
-                  <span style="color:#ffc107;font-size:0.8rem" title="Low inventory">&#9888;</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if bean.cost_per_g > 0 %}
-                  ${{ "%.4f"|format(bean.cost_per_g) }}
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if bean.inventory_value > 0 %}
-                  ${{ "%.2f"|format(bean.inventory_value) }}
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td>{{ bean.roast_count }}</td>
-              <td class="text-end d-flex gap-2 justify-content-end">
-                <button class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal" data-bs-target="#editModal"
-                        data-id="{{ bean.id }}"
-                        data-name="{{ bean.name }}"
-                        data-process="{{ bean.process_type }}"
-                        data-inventory="{{ bean.inventory_g }}"
-                        data-cost="{{ bean.cost_per_g }}">
-                  Edit
-                </button>
-                <form action="/beans/{{ bean.id }}/delete" method="post"
-                      onsubmit="return confirm('Delete this bean?')">
-                  <button class="btn btn-sm btn-outline-danger"
-                          {% if bean.roast_count > 0 %}disabled
-                          title="Used in {{ bean.roast_count }} roast(s) — cannot delete"
-                          {% endif %}>
-                    Delete
+  <div class="grid-stack-item" gs-id="beans-list" gs-x="0" gs-y="7" gs-w="12" gs-h="8" gs-min-w="6" gs-min-h="4">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100 d-flex flex-column">
+        <p class="section-label">Bean Inventory</p>
+        {% if beans %}
+        <div class="table-responsive" style="overflow-y:auto;flex:1">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Process</th>
+                <th>Inventory (g)</th>
+                <th>Cost/g</th>
+                <th>Stock Value</th>
+                <th>Roasts</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for bean in beans %}
+              <tr {% if bean.inventory_g < low_threshold %}style="background-color:rgba(255,193,7,0.07)"{% endif %}>
+                <td>{{ bean.name }}</td>
+                <td>
+                  <span class="badge rounded-pill"
+                        style="background-color:#6aa9e3;color:#040a11;font-weight:500">
+                    {{ bean.process_type }}
+                  </span>
+                </td>
+                <td>
+                  {{ "%.1f"|format(bean.inventory_g) }} g
+                  {% if bean.inventory_g < low_threshold %}
+                    <span style="color:#ffc107;font-size:0.8rem" title="Low inventory">&#9888;</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if bean.cost_per_g > 0 %}
+                    ${{ "%.4f"|format(bean.cost_per_g) }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if bean.inventory_value > 0 %}
+                    ${{ "%.2f"|format(bean.inventory_value) }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>{{ bean.roast_count }}</td>
+                <td class="text-end d-flex gap-2 justify-content-end">
+                  <button class="btn btn-sm btn-outline-secondary"
+                          data-bs-toggle="modal" data-bs-target="#editModal"
+                          data-id="{{ bean.id }}"
+                          data-name="{{ bean.name }}"
+                          data-process="{{ bean.process_type }}"
+                          data-inventory="{{ bean.inventory_g }}"
+                          data-cost="{{ bean.cost_per_g }}">
+                    Edit
                   </button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-          <tfoot>
-            <tr style="border-top:2px solid #25384f">
-              <td colspan="2" class="fw-600" style="font-weight:600;color:#dce1e7">Total</td>
-              <td style="font-weight:600;color:#dce1e7">
-                {{ "%.1f"|format(beans|sum(attribute='inventory_g')) }} g
-              </td>
-              <td></td>
-              <td style="font-weight:600;color:#6aa9e3">
-                {% set total_value = beans|sum(attribute='inventory_value') %}
-                {% if total_value > 0 %}
-                  ${{ "%.2f"|format(total_value) }}
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td colspan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
+                  <form action="/beans/{{ bean.id }}/delete" method="post"
+                        onsubmit="return confirm('Delete this bean?')">
+                    <button class="btn btn-sm btn-outline-danger"
+                            {% if bean.roast_count > 0 %}disabled
+                            title="Used in {{ bean.roast_count }} roast(s) — cannot delete"
+                            {% endif %}>
+                      Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="border-top:2px solid #25384f">
+                <td colspan="2" style="font-weight:600;color:#dce1e7">Total</td>
+                <td style="font-weight:600;color:#dce1e7">
+                  {{ "%.1f"|format(beans|sum(attribute='inventory_g')) }} g
+                </td>
+                <td></td>
+                <td style="font-weight:600;color:#6aa9e3">
+                  {% set total_value = beans|sum(attribute='inventory_value') %}
+                  {% if total_value > 0 %}
+                    ${{ "%.2f"|format(total_value) }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No beans added yet.</p>
+        {% endif %}
       </div>
-      {% else %}
-      <p class="text-muted mb-0">No beans added yet.</p>
-      {% endif %}
     </div>
   </div>
 
@@ -268,7 +277,6 @@
     for (const opt of sel.options) {
       opt.selected = opt.value === btn.dataset.process;
     }
-    // Populate cost — stored as cost_per_g, display as per-lb for convenience
     const cpg = parseFloat(btn.dataset.cost) || 0;
     if (cpg > 0) {
       editCostPrice.value = (cpg * LBS_TO_G).toFixed(2);
@@ -283,11 +291,7 @@
   function updateConvertNote() {
     if (editUnit.value === 'lbs') {
       const lbs = parseFloat(editInventory.value);
-      if (!isNaN(lbs) && lbs > 0) {
-        editNote.textContent = '= ' + (lbs * LBS_TO_G).toFixed(1) + ' g';
-      } else {
-        editNote.textContent = '';
-      }
+      editNote.textContent = (!isNaN(lbs) && lbs > 0) ? '= ' + (lbs * LBS_TO_G).toFixed(1) + ' g' : '';
     } else {
       editNote.textContent = '';
     }
@@ -311,5 +315,13 @@
 
   editCostPrice.addEventListener('input', updateCostNote);
   editCostUnit.addEventListener('change', updateCostNote);
+
+  // GridStack
+  const STORAGE_KEY = 'roastapp-beans-layout';
+  const grid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) { try { grid.load(JSON.parse(saved), false); } catch(e) { localStorage.removeItem(STORAGE_KEY); } }
+  grid.on('change', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false))); });
+  document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload(); });
 </script>
 {% endblock %}

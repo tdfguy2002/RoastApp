@@ -1,109 +1,114 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="page-title mb-0">Roast History</h4>
-  <button class="btn btn-coffee btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-    Import CSV
-  </button>
+  <div class="d-flex gap-2">
+    <button id="resetLayout" class="btn btn-sm btn-outline-secondary">Reset Layout</button>
+    <button class="btn btn-coffee btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">Import CSV</button>
+  </div>
 </div>
 
-<div class="row g-4">
+<div class="grid-stack">
 
   <!-- Chart -->
-  <div class="col-12">
-    <div class="card p-4">
-      <p class="section-label">Weight Loss Over Time</p>
-      {% if roasts %}
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div id="beanToggles" class="d-flex flex-wrap gap-2"></div>
-        <div class="d-flex align-items-center gap-2">
-          <div class="btn-group btn-group-sm" id="modeToggle">
-            <button type="button" class="btn btn-coffee" data-mode="pct" style="font-size:0.78rem">%</button>
-            <button type="button" class="btn btn-outline-secondary" data-mode="g" style="font-size:0.78rem">g</button>
+  <div class="grid-stack-item" gs-id="roast-chart" gs-x="0" gs-y="0" gs-w="12" gs-h="8" gs-min-w="6" gs-min-h="4">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100 d-flex flex-column">
+        <p class="section-label">Weight Loss Over Time</p>
+        {% if roasts %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div id="beanToggles" class="d-flex flex-wrap gap-2"></div>
+          <div class="d-flex align-items-center gap-2">
+            <div class="btn-group btn-group-sm" id="modeToggle">
+              <button type="button" class="btn btn-coffee" data-mode="pct" style="font-size:0.78rem">%</button>
+              <button type="button" class="btn btn-outline-secondary" data-mode="g" style="font-size:0.78rem">g</button>
+            </div>
+            <button id="resetZoom" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;white-space:nowrap">Reset Zoom</button>
           </div>
-          <button id="resetZoom" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;white-space:nowrap">Reset Zoom</button>
         </div>
+        <div style="position:relative;flex:1;min-height:150px">
+          <canvas id="roastChart"></canvas>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No roasts logged yet.</p>
+        {% endif %}
       </div>
-      <div style="position:relative;height:360px">
-        <canvas id="roastChart"></canvas>
-      </div>
-      {% else %}
-      <p class="text-muted mb-0">No roasts logged yet.</p>
-      {% endif %}
     </div>
   </div>
 
   <!-- History Table -->
-  <div class="col-12">
-    <div class="card p-4">
-      <p class="section-label">All Roasts
+  <div class="grid-stack-item" gs-id="roast-table" gs-x="0" gs-y="8" gs-w="12" gs-h="8" gs-min-w="6" gs-min-h="4">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100 d-flex flex-column">
+        <p class="section-label">All Roasts
+          {% if roasts %}
+          <span class="badge ms-2" style="background-color:#6aa9e3;color:#040a11;font-size:0.75rem;vertical-align:middle">
+            {{ roasts|length }}
+          </span>
+          {% endif %}
+        </p>
         {% if roasts %}
-        <span class="badge ms-2" style="background-color:#6aa9e3;color:#040a11;font-size:0.75rem;vertical-align:middle">
-          {{ roasts|length }}
-        </span>
+        <div class="table-responsive" style="overflow-y:auto;flex:1">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Bean</th>
+                <th>Start (g)</th>
+                <th>End (g)</th>
+                <th>Loss (g)</th>
+                <th>Loss (%)</th>
+                <th>1st Crack</th>
+                <th>Total Time</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for roast in roasts %}
+              <tr>
+                <td>{{ roast.date }}</td>
+                <td>{{ roast.bean_name }}</td>
+                <td>{{ roast.start_weight_g }}</td>
+                <td>
+                  {% if roast.end_weight_g %}
+                    {{ roast.end_weight_g }}
+                  {% else %}
+                    <span class="badge" style="background-color:rgba(106,169,227,0.15);color:#6aa9e3;font-weight:500">In Progress</span>
+                  {% endif %}
+                </td>
+                <td>{{ roast.weight_loss_g or '—' }}</td>
+                <td>{% if roast.weight_loss_pct %}{{ roast.weight_loss_pct }}%{% else %}—{% endif %}</td>
+                <td>{{ roast.first_crack_fmt or '—' }}</td>
+                <td>{{ roast.total_roast_time or '—' }}</td>
+                <td class="text-end d-flex gap-2 justify-content-end">
+                  <button class="btn btn-sm btn-outline-secondary"
+                          data-bs-toggle="modal" data-bs-target="#editRoastModal"
+                          data-id="{{ roast.id }}"
+                          data-date="{{ roast.date }}"
+                          data-bean="{{ roast.bean_id }}"
+                          data-start="{{ roast.start_weight_g }}"
+                          data-end="{{ roast.end_weight_g }}"
+                          data-crack="{{ roast.first_crack_fmt or '' }}"
+                          data-c-used="{{ roast.c_button_used }}"
+                          data-plus="{{ roast.plus_presses }}"
+                          data-minus="{{ roast.minus_presses }}">
+                    Edit
+                  </button>
+                  <form action="/roasts/{{ roast.id }}/delete" method="post"
+                        onsubmit="return confirm('Delete this roast?')">
+                    <button class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No roasts logged yet.</p>
         {% endif %}
-      </p>
-      {% if roasts %}
-      <div class="table-responsive" style="max-height:400px;overflow-y:auto">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Date</th>
-              <th>Bean</th>
-              <th>Start (g)</th>
-              <th>End (g)</th>
-              <th>Loss (g)</th>
-              <th>Loss (%)</th>
-              <th>1st Crack</th>
-              <th>Total Time</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for roast in roasts %}
-            <tr>
-              <td>{{ roast.date }}</td>
-              <td>{{ roast.bean_name }}</td>
-              <td>{{ roast.start_weight_g }}</td>
-              <td>
-                {% if roast.end_weight_g %}
-                  {{ roast.end_weight_g }}
-                {% else %}
-                  <span class="badge" style="background-color:rgba(106,169,227,0.15);color:#6aa9e3;font-weight:500">In Progress</span>
-                {% endif %}
-              </td>
-              <td>{{ roast.weight_loss_g or '—' }}</td>
-              <td>{% if roast.weight_loss_pct %}{{ roast.weight_loss_pct }}%{% else %}—{% endif %}</td>
-              <td>{{ roast.first_crack_fmt or '—' }}</td>
-              <td>{{ roast.total_roast_time or '—' }}</td>
-              <td class="text-end d-flex gap-2 justify-content-end">
-                <button class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="modal" data-bs-target="#editRoastModal"
-                        data-id="{{ roast.id }}"
-                        data-date="{{ roast.date }}"
-                        data-bean="{{ roast.bean_id }}"
-                        data-start="{{ roast.start_weight_g }}"
-                        data-end="{{ roast.end_weight_g }}"
-                        data-crack="{{ roast.first_crack_fmt or '' }}"
-                        data-c-used="{{ roast.c_button_used }}"
-                        data-plus="{{ roast.plus_presses }}"
-                        data-minus="{{ roast.minus_presses }}">
-                  Edit
-                </button>
-                <form action="/roasts/{{ roast.id }}/delete" method="post"
-                      onsubmit="return confirm('Delete this roast?')">
-                  <button class="btn btn-sm btn-outline-danger">Delete</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
       </div>
-      {% else %}
-      <p class="text-muted mb-0">No roasts logged yet.</p>
-      {% endif %}
     </div>
   </div>
 
@@ -345,6 +350,7 @@
   });
 
   document.getElementById('resetZoom').addEventListener('click', () => chart.resetZoom());
+  window._roastChart = chart;
 
   // % / g mode toggle
   let chartMode = 'pct';
@@ -409,6 +415,15 @@
 </script>
 {% endif %}
 <script>
+  // GridStack for history page
+  const HIST_STORAGE_KEY = 'roastapp-history-layout';
+  const histGrid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+  const histSaved = localStorage.getItem(HIST_STORAGE_KEY);
+  if (histSaved) { try { histGrid.load(JSON.parse(histSaved), false); } catch(e) { localStorage.removeItem(HIST_STORAGE_KEY); } }
+  histGrid.on('change', () => { localStorage.setItem(HIST_STORAGE_KEY, JSON.stringify(histGrid.save(false))); });
+  histGrid.on('resizestop', () => { if (window._roastChart) window._roastChart.resize(); });
+  document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(HIST_STORAGE_KEY); location.reload(); });
+
   const FULL_ROAST_E    = 18 * 60;
   const DEFAULT_AFTER_E = 190;
 
