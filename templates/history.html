@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="page-title mb-0">Roast History</h4>
   <div class="d-flex gap-2">
-    <button id="resetLayout" class="btn btn-sm btn-outline-secondary">Reset Layout</button>
+    <button id="resetLayout" class="btn btn-sm btn-outline-secondary d-none d-lg-block">Reset Layout</button>
     <button class="btn btn-coffee btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">Import CSV</button>
   </div>
 </div>
@@ -27,7 +27,7 @@
             <button id="resetZoom" class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;white-space:nowrap">Reset Zoom</button>
           </div>
         </div>
-        <div style="position:relative;flex:1;min-height:150px">
+        <div style="position:relative;flex:1;min-height:300px">
           <canvas id="roastChart"></canvas>
         </div>
         {% else %}
@@ -417,14 +417,16 @@
 <script>
   // GridStack for history page
   const HIST_STORAGE_KEY = 'roastapp-history-layout';
-  const histGrid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
-  histGrid.setStatic(window.gridLocked);
-  window.appGrids.push(histGrid);
-  const histSaved = localStorage.getItem(HIST_STORAGE_KEY);
-  if (histSaved) { try { histGrid.load(JSON.parse(histSaved), false); } catch(e) { localStorage.removeItem(HIST_STORAGE_KEY); } }
-  histGrid.on('change', () => { localStorage.setItem(HIST_STORAGE_KEY, JSON.stringify(histGrid.save(false))); });
-  histGrid.on('resizestop', () => { if (window._roastChart) window._roastChart.resize(); });
-  document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(HIST_STORAGE_KEY); location.reload(); });
+  if (window.isDesktop()) {
+    const histGrid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+    histGrid.setStatic(window.gridLocked);
+    window.appGrids.push(histGrid);
+    const histSaved = localStorage.getItem(HIST_STORAGE_KEY);
+    if (histSaved) { try { histGrid.load(JSON.parse(histSaved), false); } catch(e) { localStorage.removeItem(HIST_STORAGE_KEY); } }
+    histGrid.on('change', () => { localStorage.setItem(HIST_STORAGE_KEY, JSON.stringify(histGrid.save(false))); });
+    histGrid.on('resizestop', () => { if (window._roastChart) window._roastChart.resize(); });
+    document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(HIST_STORAGE_KEY); location.reload(); });
+  }
 
   const FULL_ROAST_E    = 18 * 60;
   const DEFAULT_AFTER_E = 190;

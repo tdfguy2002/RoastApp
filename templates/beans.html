@@ -3,7 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="page-title mb-0">Beans</h4>
-  <button id="resetLayout" class="btn btn-sm btn-outline-secondary">Reset Layout</button>
+  <button id="resetLayout" class="btn btn-sm btn-outline-secondary d-none d-lg-block">Reset Layout</button>
 </div>
 
 {% set low_beans = beans | selectattr('inventory_g', 'lt', low_threshold) | list %}
@@ -318,12 +318,14 @@
 
   // GridStack
   const STORAGE_KEY = 'roastapp-beans-layout';
-  const grid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
-  grid.setStatic(window.gridLocked);
-  window.appGrids.push(grid);
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) { try { grid.load(JSON.parse(saved), false); } catch(e) { localStorage.removeItem(STORAGE_KEY); } }
-  grid.on('change', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false))); });
-  document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload(); });
+  if (window.isDesktop()) {
+    const grid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+    grid.setStatic(window.gridLocked);
+    window.appGrids.push(grid);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) { try { grid.load(JSON.parse(saved), false); } catch(e) { localStorage.removeItem(STORAGE_KEY); } }
+    grid.on('change', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false))); });
+    document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload(); });
+  }
 </script>
 {% endblock %}

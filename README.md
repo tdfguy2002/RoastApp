@@ -14,6 +14,8 @@ A browser-based coffee roast tracker. Log roasting sessions, manage bean invento
 - **Bean management** — add, edit, and delete bean types with process type, inventory (g or lbs), and purchase price (per lb, kg, or g); stock value calculated automatically
 - **Low inventory alerts** — configurable threshold (default 200 g); banner and row highlighting when stock runs low
 - **CSV import** — import historical roasts from a CSV file with a row-by-row preview before committing
+- **Roast Color Card** — Sweet Maria's roast color reference card for judging roast degree by eye
+- **Resizable layouts** — all pages use GridStack so panels can be dragged and resized; a global grid lock toggle in the sidebar Settings section freezes/unfreezes the layout
 
 ## Tech Stack
 

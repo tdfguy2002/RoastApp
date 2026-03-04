@@ -288,7 +288,7 @@
     ::-webkit-scrollbar-thumb { background: #25384f; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #35506a; }
 
-    /* ── GridStack shared styles ── */
+    /* ── GridStack shared styles (desktop only) ── */
     .grid-stack { background: transparent; }
     .grid-stack-item-content { border-radius: 6px; overflow: auto; }
     .grid-stack-item > .ui-resizable-se {
@@ -300,6 +300,35 @@
       background: rgba(106,169,227,0.08);
       border: 1px dashed #6aa9e3;
       border-radius: 6px;
+    }
+
+    /* ── GridStack mobile fallback ── */
+    @media (max-width: 991.98px) {
+      /* Stack grid items as normal blocks */
+      .grid-stack {
+        display: flex !important;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .grid-stack > .grid-stack-item {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+      }
+      .grid-stack > .grid-stack-item > .grid-stack-item-content {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      /* Cards should be natural height on mobile, not flex-fill */
+      .grid-stack > .grid-stack-item .card {
+        height: auto !important;
+        display: block !important;
+      }
+      /* Hide resize handles */
+      .ui-resizable-handle { display: none !important; }
     }
 
     /* ── Flatpickr overrides ── */
@@ -390,8 +419,8 @@
         <a class="nav-link {% if request.endpoint == 'roast_color_card' %}active{% endif %}"
            href="/roast-color-card">Color Card</a>
       </div>
-      <div style="margin-top:auto;padding-top:1.25rem;border-top:1px solid #25384f">
-        <span class="nav-section d-none d-lg-block">Settings</span>
+      <div class="d-none d-lg-flex flex-column" style="margin-top:auto;padding-top:1.25rem;border-top:1px solid #25384f">
+        <span class="nav-section">Settings</span>
         <button id="gridLockToggle" class="nav-link w-100 text-start"
                 style="border:none;background:none;cursor:pointer;font-size:0.875rem">
         </button>
@@ -419,6 +448,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     // Global grid lock — locked by default
+    window.isDesktop = () => window.innerWidth >= 992;
     window.appGrids = [];
     window.gridLocked = localStorage.getItem('roastapp-grid-locked') !== 'false';
 
