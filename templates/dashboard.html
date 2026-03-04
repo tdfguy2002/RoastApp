@@ -167,33 +167,13 @@
 <script>
   const STORAGE_KEY = 'roastapp-dashboard-layout';
 
-  const grid = GridStack.init({
-    cellHeight: 70,
-    margin: 6,
-    animate: true,
-    float: false,
-    resizable: { handles: 'se' },
-  });
+  const grid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+  grid.setStatic(window.gridLocked);
+  window.appGrids.push(grid);
 
-  // Restore saved layout
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      grid.load(JSON.parse(saved), false);
-    } catch (e) {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }
-
-  // Save on move or resize
-  grid.on('change', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false)));
-  });
-
-  // Reset to default
-  document.getElementById('resetLayout').addEventListener('click', () => {
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
-  });
+  if (saved) { try { grid.load(JSON.parse(saved), false); } catch(e) { localStorage.removeItem(STORAGE_KEY); } }
+  grid.on('change', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false))); });
+  document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload(); });
 </script>
 {% endblock %}

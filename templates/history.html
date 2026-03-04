@@ -418,6 +418,8 @@
   // GridStack for history page
   const HIST_STORAGE_KEY = 'roastapp-history-layout';
   const histGrid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+  histGrid.setStatic(window.gridLocked);
+  window.appGrids.push(histGrid);
   const histSaved = localStorage.getItem(HIST_STORAGE_KEY);
   if (histSaved) { try { histGrid.load(JSON.parse(histSaved), false); } catch(e) { localStorage.removeItem(HIST_STORAGE_KEY); } }
   histGrid.on('change', () => { localStorage.setItem(HIST_STORAGE_KEY, JSON.stringify(histGrid.save(false))); });
