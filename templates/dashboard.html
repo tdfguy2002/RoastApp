@@ -53,7 +53,7 @@
     <div class="grid-stack-item-content">
       <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
         <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
-          {% if stats.total_weight_roasted %}{{ "%.0f"|format(stats.total_weight_roasted) }}g{% else %}—{% endif %}
+          {% if stats.total_weight_roasted %}{{ "%.2f"|format(stats.total_weight_roasted / 453.592) }} lbs{% else %}—{% endif %}
         </div>
         <div class="section-label mb-0">Total Weight Roasted</div>
       </div>

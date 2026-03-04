@@ -19,12 +19,12 @@ A browser-based coffee roast tracker. Log roasting sessions, manage bean invento
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python / Flask |
-| Database | SQLite (`roastapp.db`) |
+| Layer    | Technology                        |
+|----------|-----------------------------------|
+| Backend  | Python / Flask                    |
+| Database | SQLite (`roastapp.db`)            |
 | Frontend | Jinja2 + Bootstrap 5 + Inter font |
-| Charting | Chart.js 4 + chartjs-plugin-zoom |
+| Charting | Chart.js 4 + chartjs-plugin-zoom  |
 
 ## Getting Started
 

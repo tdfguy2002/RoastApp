@@ -43,6 +43,16 @@
           <hr style="border-color:#25384f;margin:1.25rem 0">
           <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
 
+          <input type="hidden" name="roast_base_secs" id="roastBaseSecs" value="1080">
+          <div class="mb-3">
+            <label class="form-label">Weight Setting</label>
+            <div class="btn-group w-100" role="group" id="weightPresets">
+              <button type="button" class="btn btn-coffee weight-preset active" data-secs="1080">1 lb<br><small style="font-weight:400;font-size:0.75rem">18:00</small></button>
+              <button type="button" class="btn btn-outline-secondary weight-preset" data-secs="720">½ lb<br><small style="font-weight:400;font-size:0.75rem">12:00</small></button>
+              <button type="button" class="btn btn-outline-secondary weight-preset" data-secs="510">¼ lb<br><small style="font-weight:400;font-size:0.75rem">8:30</small></button>
+            </div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">First Crack Time</label>
             <input type="text" name="first_crack_time" id="firstCrackTime" class="form-control"
@@ -52,7 +62,7 @@
 
           <div class="mb-3 form-check">
             <input type="checkbox" name="c_button_used" id="cButtonUsed" class="form-check-input" value="1">
-            <label class="form-check-label" for="cButtonUsed" style="font-size:0.875rem;color:#dce1e7">C button was pressed at first crack</label>
+            <label class="form-check-label" for="cButtonUsed" style="font-size:0.875rem;color:#dce1e7">Rosetta Stone (C) pressed at first crack</label>
           </div>
 
           <div id="cButtonFields" style="display:none">
@@ -94,16 +104,30 @@
 
 {% block scripts %}
 <script>
-  const FULL_ROAST    = 18 * 60;
   const DEFAULT_AFTER = 190;
 
-  const firstCrackEl = document.getElementById('firstCrackTime');
-  const cButtonEl    = document.getElementById('cButtonUsed');
-  const cFieldsEl    = document.getElementById('cButtonFields');
-  const plusEl       = document.getElementById('plusPresses');
-  const minusEl      = document.getElementById('minusPresses');
-  const totalDisplay = document.getElementById('totalTimeDisplay');
-  const totalValueEl = document.getElementById('totalTimeValue');
+  const firstCrackEl  = document.getElementById('firstCrackTime');
+  const cButtonEl     = document.getElementById('cButtonUsed');
+  const cFieldsEl     = document.getElementById('cButtonFields');
+  const plusEl        = document.getElementById('plusPresses');
+  const minusEl       = document.getElementById('minusPresses');
+  const totalDisplay  = document.getElementById('totalTimeDisplay');
+  const totalValueEl  = document.getElementById('totalTimeValue');
+  const baseSecsInput = document.getElementById('roastBaseSecs');
+
+  // Weight preset buttons
+  document.querySelectorAll('#weightPresets .weight-preset').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#weightPresets .weight-preset').forEach(b => {
+        b.classList.remove('btn-coffee', 'active');
+        b.classList.add('btn-outline-secondary');
+      });
+      this.classList.remove('btn-outline-secondary');
+      this.classList.add('btn-coffee', 'active');
+      baseSecsInput.value = this.dataset.secs;
+      calcAndDisplay();
+    });
+  });
 
   function parseCrackTime(str) {
     if (!str || !str.trim()) return null;
@@ -119,6 +143,7 @@
   }
 
   function calcAndDisplay() {
+    const baseSecs  = parseInt(baseSecsInput.value, 10) || 1080;
     const crackSecs = parseCrackTime(firstCrackEl.value);
     const cUsed     = cButtonEl.checked;
     const plus      = parseInt(plusEl.value, 10) || 0;
@@ -127,11 +152,11 @@
     let total = null;
     if (crackSecs !== null || cUsed) {
       if (cUsed && crackSecs !== null) {
-        const elapsed = Math.max(0, FULL_ROAST - crackSecs);
+        const elapsed = Math.max(0, baseSecs - crackSecs);
         const afterC  = Math.max(0, DEFAULT_AFTER + (plus - minus) * 10);
         total = elapsed + afterC;
       } else {
-        total = FULL_ROAST;
+        total = baseSecs;
       }
     }
 

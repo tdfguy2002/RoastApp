@@ -57,11 +57,14 @@ def parse_crack_time(time_str):
         return None
 
 
-def calc_roast_time(first_crack_secs, c_used, plus_presses, minus_presses):
+WEIGHT_PRESETS = {1080: '1 lb', 720: '1/2 lb', 510: '1/4 lb'}
+
+
+def calc_roast_time(first_crack_secs, c_used, plus_presses, minus_presses, base_secs=1080):
     """Return total roast time in seconds."""
     if not c_used or first_crack_secs is None:
-        return 18 * 60
-    elapsed = 18 * 60 - first_crack_secs
+        return base_secs
+    elapsed = base_secs - first_crack_secs
     after_c = 190 + (plus_presses - minus_presses) * 10  # 3:10 = 190s
     return max(elapsed, 0) + max(after_c, 0)
 
@@ -144,6 +147,7 @@ def init_db():
         ('c_button_used',    'INTEGER NOT NULL DEFAULT 0'),
         ('plus_presses',     'INTEGER NOT NULL DEFAULT 0'),
         ('minus_presses',    'INTEGER NOT NULL DEFAULT 0'),
+        ('roast_base_secs',  'INTEGER NOT NULL DEFAULT 1080'),
     ]:
         if col not in existing_roast_cols:
             conn.execute(f'ALTER TABLE roasts ADD COLUMN {col} {defn}')
@@ -260,17 +264,20 @@ def add_roast():
             return redirect(url_for('roast_page'))
         loss = round(start - end, 1)
 
-    c_used       = 1 if request.form.get('c_button_used') else 0
-    first_crack  = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
-    plus_presses = int(request.form.get('plus_presses',  0) or 0)
-    minus_presses= int(request.form.get('minus_presses', 0) or 0)
+    c_used        = 1 if request.form.get('c_button_used') else 0
+    first_crack   = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
+    plus_presses  = int(request.form.get('plus_presses',  0) or 0)
+    minus_presses = int(request.form.get('minus_presses', 0) or 0)
+    roast_base_secs = int(request.form.get('roast_base_secs', 1080) or 1080)
+    if roast_base_secs not in WEIGHT_PRESETS:
+        roast_base_secs = 1080
 
     conn = get_db()
     conn.execute(
         'INSERT INTO roasts (date, bean_id, start_weight_g, end_weight_g, weight_loss_g, '
-        'first_crack_secs, c_button_used, plus_presses, minus_presses) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        (date_val, bean_id, start, end, loss, first_crack, c_used, plus_presses, minus_presses)
+        'first_crack_secs, c_button_used, plus_presses, minus_presses, roast_base_secs) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (date_val, bean_id, start, end, loss, first_crack, c_used, plus_presses, minus_presses, roast_base_secs)
     )
     # Deduct start weight from bean inventory
     conn.execute(
@@ -308,7 +315,8 @@ def history_page():
         SELECT r.id, r.date, r.bean_id, b.name AS bean_name,
                r.start_weight_g, r.end_weight_g, r.weight_loss_g,
                ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct,
-               r.first_crack_secs, r.c_button_used, r.plus_presses, r.minus_presses
+               r.first_crack_secs, r.c_button_used, r.plus_presses, r.minus_presses,
+               COALESCE(r.roast_base_secs, 1080) AS roast_base_secs
         FROM roasts r
         JOIN beans b ON r.bean_id = b.id
         ORDER BY r.date DESC, r.id DESC
@@ -321,7 +329,8 @@ def history_page():
         d['first_crack_fmt'] = fmt_time(r['first_crack_secs'])
         d['total_roast_time'] = fmt_time(
             calc_roast_time(r['first_crack_secs'], r['c_button_used'],
-                            r['plus_presses'], r['minus_presses'])
+                            r['plus_presses'], r['minus_presses'],
+                            r['roast_base_secs'])
         )
         roasts.append(d)
 
@@ -363,6 +372,9 @@ def edit_roast(roast_id):
     first_crack   = parse_crack_time(request.form.get('first_crack_time', '')) if c_used else None
     plus_presses  = int(request.form.get('plus_presses',  0) or 0)
     minus_presses = int(request.form.get('minus_presses', 0) or 0)
+    roast_base_secs = int(request.form.get('roast_base_secs', 1080) or 1080)
+    if roast_base_secs not in WEIGHT_PRESETS:
+        roast_base_secs = 1080
 
     conn = get_db()
     old = conn.execute(
@@ -381,9 +393,9 @@ def edit_roast(roast_id):
     )
     conn.execute(
         'UPDATE roasts SET date=?, bean_id=?, start_weight_g=?, end_weight_g=?, weight_loss_g=?, '
-        'first_crack_secs=?, c_button_used=?, plus_presses=?, minus_presses=? WHERE id=?',
+        'first_crack_secs=?, c_button_used=?, plus_presses=?, minus_presses=?, roast_base_secs=? WHERE id=?',
         (date_val, new_bean_id, new_start, new_end, new_loss,
-         first_crack, c_used, plus_presses, minus_presses, roast_id)
+         first_crack, c_used, plus_presses, minus_presses, roast_base_secs, roast_id)
     )
     conn.commit()
     conn.close()
