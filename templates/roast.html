@@ -1,94 +1,101 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h4 class="page-title">Log a Roast</h4>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="page-title mb-0">Log a Roast</h4>
+  <button id="resetLayout" class="btn btn-sm btn-outline-secondary">Reset Layout</button>
+</div>
 
-<div class="row">
-  <div class="col-12 col-lg-6">
-    <div class="card p-4">
-      {% if beans %}
-      <form action="/roasts" method="post">
-        <div class="mb-3">
-          <label class="form-label">Date</label>
-          <input type="date" name="date" class="form-control" value="{{ today }}" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Bean Type</label>
-          <select name="bean_id" class="form-select" required>
-            {% for bean in beans %}
-            <option value="{{ bean.id }}">
-              {{ bean.name }} ({{ bean.process_type }}) — {{ "%.1f"|format(bean.inventory_g) }}g in stock
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Start Weight (g)</label>
-          <input type="number" name="start_weight_g" class="form-control"
-                 step="0.1" min="1" placeholder="e.g. 250" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">End Weight (g)</label>
-          <input type="number" name="end_weight_g" class="form-control"
-                 step="0.1" min="1" placeholder="e.g. 210">
-          <div class="form-text">Leave blank to fill in after the roast</div>
-        </div>
+<div class="grid-stack">
 
-        <!-- Roast Timing -->
-        <hr style="border-color:#25384f;margin:1.25rem 0">
-        <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
+  <div class="grid-stack-item" gs-id="roast-form" gs-x="0" gs-y="0" gs-w="6" gs-h="12" gs-min-w="3" gs-min-h="6">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100">
+        {% if beans %}
+        <form action="/roasts" method="post">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="{{ today }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Bean Type</label>
+            <select name="bean_id" class="form-select" required>
+              {% for bean in beans %}
+              <option value="{{ bean.id }}">
+                {{ bean.name }} ({{ bean.process_type }}) — {{ "%.1f"|format(bean.inventory_g) }}g in stock
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Start Weight (g)</label>
+            <input type="number" name="start_weight_g" class="form-control"
+                   step="0.1" min="1" placeholder="e.g. 250" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">End Weight (g)</label>
+            <input type="number" name="end_weight_g" class="form-control"
+                   step="0.1" min="1" placeholder="e.g. 210">
+            <div class="form-text">Leave blank to fill in after the roast</div>
+          </div>
 
-        <div class="mb-3">
-          <label class="form-label">First Crack Time</label>
-          <input type="text" name="first_crack_time" id="firstCrackTime" class="form-control"
-                 placeholder="e.g. 9:45">
-          <div class="form-text">Countdown time shown on the roaster when first crack occurs (M:SS)</div>
-        </div>
+          <!-- Roast Timing -->
+          <hr style="border-color:#25384f;margin:1.25rem 0">
+          <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
 
-        <div class="mb-3 form-check">
-          <input type="checkbox" name="c_button_used" id="cButtonUsed" class="form-check-input" value="1">
-          <label class="form-check-label" for="cButtonUsed" style="font-size:0.875rem;color:#dce1e7">C button was pressed at first crack</label>
-        </div>
+          <div class="mb-3">
+            <label class="form-label">First Crack Time</label>
+            <input type="text" name="first_crack_time" id="firstCrackTime" class="form-control"
+                   placeholder="e.g. 9:45">
+            <div class="form-text">Countdown time shown on the roaster when first crack occurs (M:SS)</div>
+          </div>
 
-        <div id="cButtonFields" style="display:none">
-          <div class="row g-3 mb-3">
-            <div class="col">
-              <label class="form-label">+ Presses</label>
-              <input type="number" name="plus_presses" id="plusPresses" class="form-control"
-                     min="0" value="0">
-              <div class="form-text">+10s per press</div>
-            </div>
-            <div class="col">
-              <label class="form-label">− Presses</label>
-              <input type="number" name="minus_presses" id="minusPresses" class="form-control"
-                     min="0" value="0">
-              <div class="form-text">−10s per press</div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" name="c_button_used" id="cButtonUsed" class="form-check-input" value="1">
+            <label class="form-check-label" for="cButtonUsed" style="font-size:0.875rem;color:#dce1e7">C button was pressed at first crack</label>
+          </div>
+
+          <div id="cButtonFields" style="display:none">
+            <div class="row g-3 mb-3">
+              <div class="col">
+                <label class="form-label">+ Presses</label>
+                <input type="number" name="plus_presses" id="plusPresses" class="form-control"
+                       min="0" value="0">
+                <div class="form-text">+10s per press</div>
+              </div>
+              <div class="col">
+                <label class="form-label">− Presses</label>
+                <input type="number" name="minus_presses" id="minusPresses" class="form-control"
+                       min="0" value="0">
+                <div class="form-text">−10s per press</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div id="totalTimeDisplay" class="mb-3" style="display:none">
-          <div style="background:#0e1722;border:1px solid #25384f;border-radius:4px;padding:0.6rem 0.875rem;font-size:0.875rem">
-            Total roast time: <strong id="totalTimeValue" style="color:#6aa9e3">—</strong>
+          <div id="totalTimeDisplay" class="mb-3" style="display:none">
+            <div style="background:#0e1722;border:1px solid #25384f;border-radius:4px;padding:0.6rem 0.875rem;font-size:0.875rem">
+              Total roast time: <strong id="totalTimeValue" style="color:#6aa9e3">—</strong>
+            </div>
           </div>
-        </div>
 
-        <button type="submit" class="btn btn-coffee w-100">Log Roast</button>
-      </form>
-      {% else %}
-      <p class="text-muted mb-0">
-        No beans yet. <a href="/beans">Add some beans</a> before logging a roast.
-      </p>
-      {% endif %}
+          <button type="submit" class="btn btn-coffee w-100">Log Roast</button>
+        </form>
+        {% else %}
+        <p class="text-muted mb-0">
+          No beans yet. <a href="/beans">Add some beans</a> before logging a roast.
+        </p>
+        {% endif %}
+      </div>
     </div>
   </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  const FULL_ROAST    = 18 * 60;  // 1080s
-  const DEFAULT_AFTER = 190;      // 3:10 = 190s base after C
+  const FULL_ROAST    = 18 * 60;
+  const DEFAULT_AFTER = 190;
 
   const firstCrackEl = document.getElementById('firstCrackTime');
   const cButtonEl    = document.getElementById('cButtonUsed');
@@ -118,14 +125,12 @@
     const minus     = parseInt(minusEl.value, 10) || 0;
 
     let total = null;
-
     if (crackSecs !== null || cUsed) {
       if (cUsed && crackSecs !== null) {
         const elapsed = Math.max(0, FULL_ROAST - crackSecs);
         const afterC  = Math.max(0, DEFAULT_AFTER + (plus - minus) * 10);
         total = elapsed + afterC;
       } else {
-        // First crack noted or C checked without valid time: show 18:00
         total = FULL_ROAST;
       }
     }
@@ -146,5 +151,13 @@
   firstCrackEl.addEventListener('input', calcAndDisplay);
   plusEl.addEventListener('input', calcAndDisplay);
   minusEl.addEventListener('input', calcAndDisplay);
+
+  // GridStack
+  const STORAGE_KEY = 'roastapp-roast-layout';
+  const grid = GridStack.init({ cellHeight: 70, margin: 6, animate: true, float: false, resizable: { handles: 'se' } });
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) { try { grid.load(JSON.parse(saved), false); } catch(e) { localStorage.removeItem(STORAGE_KEY); } }
+  grid.on('change', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(grid.save(false))); });
+  document.getElementById('resetLayout').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload(); });
 </script>
 {% endblock %}
