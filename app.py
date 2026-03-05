@@ -127,6 +127,9 @@ def init_db():
     conn.execute(
         "INSERT OR IGNORE INTO settings (key, value) VALUES ('low_inventory_g', '200')"
     )
+    conn.execute(
+        "INSERT OR IGNORE INTO settings (key, value) VALUES ('max_inventory_bar_g', '9071.8')"
+    )
     conn.commit()
 
     # Migrate existing beans table if new columns are missing
@@ -191,7 +194,8 @@ def dashboard():
     recent_roasts = db.execute('''
         SELECT r.id, r.date, b.name AS bean_name,
                r.start_weight_g, r.end_weight_g, r.weight_loss_g,
-               ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct
+               ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct,
+               ROW_NUMBER() OVER (ORDER BY r.date ASC, r.id ASC) AS roast_number
         FROM roasts r
         JOIN beans b ON r.bean_id = b.id
         ORDER BY r.date DESC, r.id DESC
@@ -218,12 +222,14 @@ def dashboard():
 
     db.close()
     low_threshold = float(get_setting('low_inventory_g', 200))
+    max_inventory_bar_g = float(get_setting('max_inventory_bar_g', 9071.8))
     return render_template('dashboard.html',
                            recent_roasts=recent_roasts,
                            inventory=inventory,
                            stats=stats,
                            total_inventory_value=total_inventory_value,
-                           low_threshold=low_threshold)
+                           low_threshold=low_threshold,
+                           max_inventory_bar_g=max_inventory_bar_g)
 
 
 @app.route('/roast')
@@ -316,7 +322,8 @@ def history_page():
                r.start_weight_g, r.end_weight_g, r.weight_loss_g,
                ROUND(r.weight_loss_g / r.start_weight_g * 100.0, 1) AS weight_loss_pct,
                r.first_crack_secs, r.c_button_used, r.plus_presses, r.minus_presses,
-               COALESCE(r.roast_base_secs, 1080) AS roast_base_secs
+               COALESCE(r.roast_base_secs, 1080) AS roast_base_secs,
+               ROW_NUMBER() OVER (ORDER BY r.date ASC, r.id ASC) AS roast_number
         FROM roasts r
         JOIN beans b ON r.bean_id = b.id
         ORDER BY r.date DESC, r.id DESC
@@ -441,8 +448,10 @@ def beans_page():
     ''').fetchall()
     db.close()
     low_threshold = float(get_setting('low_inventory_g', 200))
+    max_inventory_bar_g = float(get_setting('max_inventory_bar_g', 9071.8))
     return render_template('beans.html', beans=beans_list, process_types=PROCESS_TYPES,
-                           low_threshold=low_threshold)
+                           low_threshold=low_threshold,
+                           max_inventory_bar_g=max_inventory_bar_g)
 
 
 @app.route('/beans/<int:bean_id>/edit', methods=['POST'])
@@ -608,6 +617,18 @@ def update_low_inventory():
         set_setting('low_inventory_g', round(threshold, 1))
     except (ValueError, KeyError):
         flash('Invalid threshold value.', 'danger')
+    return redirect(url_for('beans_page'))
+
+
+@app.route('/settings/max-inventory-bar', methods=['POST'])
+def update_max_inventory_bar():
+    try:
+        lbs = float(request.form['max_inventory_bar_lbs'])
+        if lbs <= 0:
+            raise ValueError
+        set_setting('max_inventory_bar_g', round(lbs * LBS_TO_G, 1))
+    except (ValueError, KeyError):
+        flash('Invalid max inventory value.', 'danger')
     return redirect(url_for('beans_page'))
 
 

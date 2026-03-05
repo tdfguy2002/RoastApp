@@ -72,6 +72,27 @@
     </div>
   </div>
 
+  <!-- Inventory Bar Scale -->
+  <div class="grid-stack-item" gs-id="inventory-bar-scale" gs-x="9" gs-y="0" gs-w="3" gs-h="3" gs-min-w="3" gs-min-h="2">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100">
+        <p class="section-label">Dashboard Bar Scale</p>
+        <form action="/settings/max-inventory-bar" method="post" class="d-flex gap-2 align-items-end">
+          <div class="flex-grow-1">
+            <label class="form-label">Max bar = </label>
+            <div class="input-group">
+              <input type="number" name="max_inventory_bar_lbs" class="form-control"
+                     step="0.5" min="0.5" value="{{ "%.1f"|format(max_inventory_bar_g / 453.592) }}" required>
+              <span class="input-group-text">lbs</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-coffee">Save</button>
+        </form>
+        <div class="form-text mt-2">Full-width bar on the Dashboard inventory panel.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Low Inventory Threshold -->
   <div class="grid-stack-item" gs-id="low-inventory" gs-x="5" gs-y="0" gs-w="4" gs-h="3" gs-min-w="3" gs-min-h="2">
     <div class="grid-stack-item-content">
@@ -106,6 +127,7 @@
                 <th>Name</th>
                 <th>Process</th>
                 <th>Inventory (g)</th>
+                <th>Inventory (lbs)</th>
                 <th>Cost/g</th>
                 <th>Stock Value</th>
                 <th>Roasts</th>
@@ -128,6 +150,7 @@
                     <span style="color:#ffc107;font-size:0.8rem" title="Low inventory">&#9888;</span>
                   {% endif %}
                 </td>
+                <td>{{ "%.3f"|format(bean.inventory_g / 453.592) }} lbs</td>
                 <td>
                   {% if bean.cost_per_g > 0 %}
                     ${{ "%.4f"|format(bean.cost_per_g) }}
@@ -171,6 +194,9 @@
                 <td colspan="2" style="font-weight:600;color:#dce1e7">Total</td>
                 <td style="font-weight:600;color:#dce1e7">
                   {{ "%.1f"|format(beans|sum(attribute='inventory_g')) }} g
+                </td>
+                <td style="font-weight:600;color:#dce1e7">
+                  {{ "%.3f"|format(beans|sum(attribute='inventory_g') / 453.592) }} lbs
                 </td>
                 <td></td>
                 <td style="font-weight:600;color:#6aa9e3">

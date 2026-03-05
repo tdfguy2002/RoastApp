@@ -2,6 +2,10 @@
 
 
 {% block content %}
+<style>
+  /* Dashboard-scoped font size overrides */
+  .dashboard-section-label { font-size: 0.8rem; letter-spacing: 0.09em; text-transform: uppercase; color: rgba(220,225,231,0.6); font-weight: 600; }
+</style>
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="page-title mb-0">Dashboard</h4>
   <button id="resetLayout" class="btn btn-sm btn-outline-secondary d-none d-lg-block">Reset Layout</button>
@@ -30,8 +34,8 @@
   <div class="grid-stack-item" gs-id="stats-roasts" gs-x="0" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
     <div class="grid-stack-item-content">
       <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
-        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">{{ stats.total_roasts or 0 }}</div>
-        <div class="section-label mb-0">Total Roasts</div>
+        <div style="font-size:2rem;font-weight:700;color:#6aa9e3">{{ stats.total_roasts or 0 }}</div>
+        <div class="dashboard-section-label mb-0">Total Roasts</div>
       </div>
     </div>
   </div>
@@ -40,10 +44,10 @@
   <div class="grid-stack-item" gs-id="stats-loss" gs-x="3" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
     <div class="grid-stack-item-content">
       <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
-        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        <div style="font-size:2rem;font-weight:700;color:#6aa9e3">
           {{ stats.avg_loss_pct or '—' }}{% if stats.avg_loss_pct %}%{% endif %}
         </div>
-        <div class="section-label mb-0">Avg Weight Loss</div>
+        <div class="dashboard-section-label mb-0">Avg Weight Loss</div>
       </div>
     </div>
   </div>
@@ -52,10 +56,10 @@
   <div class="grid-stack-item" gs-id="stats-weight" gs-x="6" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
     <div class="grid-stack-item-content">
       <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
-        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        <div style="font-size:2rem;font-weight:700;color:#6aa9e3">
           {% if stats.total_weight_roasted %}{{ "%.2f"|format(stats.total_weight_roasted / 453.592) }} lbs{% else %}—{% endif %}
         </div>
-        <div class="section-label mb-0">Total Weight Roasted</div>
+        <div class="dashboard-section-label mb-0">Total Weight Roasted</div>
       </div>
     </div>
   </div>
@@ -64,10 +68,10 @@
   <div class="grid-stack-item" gs-id="stats-value" gs-x="9" gs-y="0" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
     <div class="grid-stack-item-content">
       <div class="card p-3 text-center h-100 d-flex flex-column justify-content-center">
-        <div style="font-size:1.6rem;font-weight:700;color:#6aa9e3">
+        <div style="font-size:2rem;font-weight:700;color:#6aa9e3">
           {% if total_inventory_value > 0 %}${{ "%.2f"|format(total_inventory_value) }}{% else %}—{% endif %}
         </div>
-        <div class="section-label mb-0">Inventory Value</div>
+        <div class="dashboard-section-label mb-0">Inventory Value</div>
       </div>
     </div>
   </div>
@@ -77,14 +81,15 @@
     <div class="grid-stack-item-content">
       <div class="card p-4 h-100 d-flex flex-column">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="section-label mb-0">Recent Roasts</p>
-          <a href="/history" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">View all →</a>
+          <p class="dashboard-section-label mb-0">Recent Roasts</p>
+          <a href="/history" style="font-size:0.9rem;color:#6aa9e3;text-decoration:none">View all →</a>
         </div>
         {% if recent_roasts %}
         <div class="table-responsive" style="overflow-y:auto;flex:1">
           <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
               <tr>
+                <th style="color:rgba(220,225,231,0.4)">#</th>
                 <th>Date</th>
                 <th>Bean</th>
                 <th>Start (g)</th>
@@ -95,6 +100,7 @@
             <tbody>
               {% for roast in recent_roasts %}
               <tr>
+                <td style="color:rgba(220,225,231,0.4);font-size:0.9rem;white-space:nowrap">{{ roast.roast_number }}</td>
                 <td style="white-space:nowrap">{{ roast.date }}</td>
                 <td>{{ roast.bean_name }}</td>
                 <td>{{ roast.start_weight_g }}</td>
@@ -106,7 +112,7 @@
                 <td>
                   {% if roast.weight_loss_pct %}
                     <span style="color:#6aa9e3;font-weight:500">{{ roast.weight_loss_pct }}%</span>
-                    <span class="text-muted" style="font-size:0.8rem"> / {{ roast.weight_loss_g }}g</span>
+                    <span class="text-muted" style="font-size:0.9rem"> / {{ roast.weight_loss_g }}g</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
               </tr>
@@ -121,27 +127,108 @@
     </div>
   </div>
 
+  <!-- Roast Color Card -->
+  <div class="grid-stack-item" gs-id="roast-color-card" gs-x="0" gs-y="11" gs-w="12" gs-h="8" gs-min-w="6" gs-min-h="6">
+    <div class="grid-stack-item-content">
+      <div class="card p-4 h-100 d-flex flex-column">
+        <p class="dashboard-section-label mb-3">Roast Color Reference <span class="text-muted" style="font-size:0.85rem;font-weight:400">— Sweet Maria's Agtron Scale</span></p>
+        <div class="table-responsive" style="overflow-y:auto;flex:1">
+          <table class="table table-hover align-middle mb-0" style="font-size:1rem">
+            <thead class="table-light">
+              <tr>
+                <th>Color</th>
+                <th>Agtron</th>
+                <th>Roast Level</th>
+                <th>Temp</th>
+                <th>Wt Loss</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#c4956a;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>95</td>
+                <td>1st Crack</td>
+                <td>412°F</td>
+                <td>10.3%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#b07d52;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>85</td>
+                <td>City</td>
+                <td>418°F</td>
+                <td>11.5%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#9a6640;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>75</td>
+                <td>City+</td>
+                <td>425°F</td>
+                <td>12.7%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#7d4f2e;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>65</td>
+                <td>Full City</td>
+                <td>432°F</td>
+                <td>13.3%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#6b3f22;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>55</td>
+                <td>Full City+</td>
+                <td>438°F</td>
+                <td>14.5%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#5a3018;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>45</td>
+                <td>Full City++</td>
+                <td>442°F</td>
+                <td>15.1%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#3d1e0a;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>35</td>
+                <td>French</td>
+                <td>448°F</td>
+                <td>15.6%</td>
+              </tr>
+              <tr>
+                <td><div style="width:28px;height:18px;border-radius:3px;background:#1f0a02;border:1px solid rgba(255,255,255,0.15)"></div></td>
+                <td>25</td>
+                <td>Burnt</td>
+                <td>455°F+</td>
+                <td>16.8%+</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="text-muted mt-2" style="font-size:0.8rem">Weigh batch before &amp; after roasting to determine actual weight loss %.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bean Inventory -->
   <div class="grid-stack-item" gs-id="bean-inventory" gs-x="7" gs-y="2" gs-w="5" gs-h="9" gs-min-w="3" gs-min-h="4">
     <div class="grid-stack-item-content">
       <div class="card p-4 h-100 d-flex flex-column">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="section-label mb-0">Bean Inventory</p>
-          <a href="/beans" style="font-size:0.8rem;color:#6aa9e3;text-decoration:none">Manage →</a>
+          <p class="dashboard-section-label mb-0">Bean Inventory</p>
+          <a href="/beans" style="font-size:0.9rem;color:#6aa9e3;text-decoration:none">Manage →</a>
         </div>
         {% if inventory %}
         <div class="d-flex flex-column gap-2" style="overflow-y:auto;flex:1">
           {% for bean in inventory %}
-          {% set pct = [[(bean.inventory_g / low_threshold * 100), 0] | max, 100] | min %}
+          {% set pct = [[((bean.inventory_g / max_inventory_bar_g) * 100) | round(1), 100] | min, 0] | max %}
           <div>
             <div class="d-flex justify-content-between align-items-baseline mb-1">
-              <span style="font-size:0.875rem;font-weight:500">
+              <span style="font-size:1rem;font-weight:500">
                 {{ bean.name }}
                 {% if bean.inventory_g < low_threshold %}
                   <span style="color:#ffc107;font-size:0.75rem">&#9888;</span>
                 {% endif %}
               </span>
-              <span style="font-size:0.8rem;color:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}rgba(220,225,231,0.6){% endif %}">
+              <span style="font-size:0.9rem;color:{% if bean.inventory_g < low_threshold %}#ffc107{% else %}rgba(220,225,231,0.6){% endif %}">
                 {{ "%.0f"|format(bean.inventory_g) }}g
               </span>
             </div>

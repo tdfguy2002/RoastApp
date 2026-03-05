@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  /* Roast page font size overrides */
+  #roast-card .form-label          { font-size: 1.1rem; }
+  #roast-card .form-control,
+  #roast-card .form-select         { font-size: 1.1rem; }
+  #roast-card .form-text           { font-size: 1rem; }
+  #roast-card .form-check-label    { font-size: 1.1rem !important; }
+  #roast-card .btn                 { font-size: 1.1rem; }
+</style>
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="page-title mb-0">Log a Roast</h4>
   <button id="resetLayout" class="btn btn-sm btn-outline-secondary d-none d-lg-block">Reset Layout</button>
@@ -10,7 +19,7 @@
 
   <div class="grid-stack-item" gs-id="roast-form" gs-x="0" gs-y="0" gs-w="6" gs-h="12" gs-min-w="3" gs-min-h="6">
     <div class="grid-stack-item-content">
-      <div class="card p-4 h-100">
+      <div class="card p-4 h-100" id="roast-card">
         {% if beans %}
         <form action="/roasts" method="post">
           <div class="mb-3">
@@ -41,15 +50,15 @@
 
           <!-- Roast Timing -->
           <hr style="border-color:#25384f;margin:1.25rem 0">
-          <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
+          <p class="section-label mb-3">Roast Timing <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.9rem;color:rgba(220,225,231,0.5)">(optional)</span></p>
 
           <input type="hidden" name="roast_base_secs" id="roastBaseSecs" value="1080">
           <div class="mb-3">
             <label class="form-label">Weight Setting</label>
             <div class="btn-group w-100" role="group" id="weightPresets">
-              <button type="button" class="btn btn-coffee weight-preset active" data-secs="1080">1 lb<br><small style="font-weight:400;font-size:0.75rem">18:00</small></button>
-              <button type="button" class="btn btn-outline-secondary weight-preset" data-secs="720">½ lb<br><small style="font-weight:400;font-size:0.75rem">12:00</small></button>
-              <button type="button" class="btn btn-outline-secondary weight-preset" data-secs="510">¼ lb<br><small style="font-weight:400;font-size:0.75rem">8:30</small></button>
+              <button type="button" class="btn btn-coffee weight-preset active" data-secs="1080">1 lb<br><small style="font-weight:400;font-size:0.875rem">18:00</small></button>
+              <button type="button" class="btn btn-outline-secondary weight-preset" data-secs="720">½ lb<br><small style="font-weight:400;font-size:0.875rem">12:00</small></button>
+              <button type="button" class="btn btn-outline-secondary weight-preset" data-secs="510">¼ lb<br><small style="font-weight:400;font-size:0.875rem">8:30</small></button>
             </div>
           </div>
 
@@ -83,7 +92,7 @@
           </div>
 
           <div id="totalTimeDisplay" class="mb-3" style="display:none">
-            <div style="background:#0e1722;border:1px solid #25384f;border-radius:4px;padding:0.6rem 0.875rem;font-size:0.875rem">
+            <div style="background:#0e1722;border:1px solid #25384f;border-radius:4px;padding:0.6rem 0.875rem;font-size:1rem">
               Total roast time: <strong id="totalTimeValue" style="color:#6aa9e3">—</strong>
             </div>
           </div>

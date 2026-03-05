@@ -53,6 +53,7 @@
           <table class="table table-hover align-middle">
             <thead class="table-light">
               <tr>
+                <th style="color:rgba(220,225,231,0.4)">#</th>
                 <th>Date</th>
                 <th>Bean</th>
                 <th>Start (g)</th>
@@ -67,6 +68,7 @@
             <tbody>
               {% for roast in roasts %}
               <tr>
+                <td style="color:rgba(220,225,231,0.4);font-size:0.8rem">{{ roast.roast_number }}</td>
                 <td>{{ roast.date }}</td>
                 <td>{{ roast.bean_name }}</td>
                 <td>{{ roast.start_weight_g }}</td>
