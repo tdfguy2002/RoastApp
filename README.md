@@ -19,12 +19,12 @@ A browser-based coffee roast tracker. Log roasting sessions, manage bean invento
 
 ## Tech Stack
 
-| Layer    | Technology                        |
-|----------|-----------------------------------|
-| Backend  | Python / Flask                    |
-| Database | SQLite (`roastapp.db`)            |
-| Frontend | Jinja2 + Bootstrap 5 + Inter font |
-| Charting | Chart.js 4 + chartjs-plugin-zoom  |
+| Layer      | Technology                           |
+|------------|--------------------------------------|
+| Backend    | Python / Flask                       |
+| Database   | SQLite (`roastapp.db`)               |
+| Frontend   | Jinja2 + Bootstrap 5 + Inter font    |
+| Charting   | Chart.js 4 + chartjs-plugin-zoom     |
 
 ## Getting Started
 
@@ -70,14 +70,14 @@ volumes:
 
 Roasts can be imported from a CSV file. The expected column layout is:
 
-| Index | Content |
-|-------|---------|
-| 0 | Ignored |
-| 1 | Date (`MM/DD/YYYY`) |
-| 2 | Start weight (grams) |
-| 3 | End weight (grams) |
-| 4–6 | Ignored |
-| 7 | Bean name (optional — defaults to *Espresso Monkey*) |
+| Index | Content                                               |
+|-------|-------------------------------------------------------|
+| 0     | Ignored                                               |
+| 1     | Date (`MM/DD/YYYY`)                                   |
+| 2     | Start weight (grams)                                  |
+| 3     | End weight (grams)                                    |
+| 4–6   | Ignored                                               |
+| 7     | Bean name (optional — defaults to *Espresso Monkey*)  |
 
 - Rows with unrecognised bean names are flagged in the preview; add the bean first and re-import
 - A full preview of valid and invalid rows is shown before anything is saved
@@ -86,31 +86,31 @@ Roasts can be imported from a CSV file. The expected column layout is:
 
 **`beans`** — bean types available for roasting
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | integer | primary key |
-| name | text | unique |
-| process_type | text | Washed / Natural / Honey / Wet-Hulled |
-| inventory_g | real | current stock in grams |
-| cost_per_g | real | purchase cost in $/g |
+| Column         | Type    | Notes                                                  |
+|----------------|---------|--------------------------------------------------------|
+| id             | integer | primary key                                            |
+| name           | text    | unique                                                 |
+| process_type   | text    | Washed / Natural / Honey / Wet-Hulled                  |
+| inventory_g    | real    | current stock in grams                                 |
+| cost_per_g     | real    | purchase cost in $/g                                   |
 
 **`roasts`** — individual roast sessions
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | integer | primary key |
-| date | text | ISO format (YYYY-MM-DD) |
-| bean_id | integer | foreign key → beans.id |
-| start_weight_g | real | grams |
-| end_weight_g | real | grams |
-| weight_loss_g | real | calculated: start − end |
-| first_crack_secs | integer | countdown seconds remaining at first crack (nullable) |
-| c_button_used | integer | 0 or 1 |
-| plus_presses | integer | number of + presses after C |
-| minus_presses | integer | number of − presses after C |
+| Column            | Type    | Notes                                                  |
+|-------------------|---------|--------------------------------------------------------|
+| id                | integer | primary key                                            |
+| date              | text    | ISO format (YYYY-MM-DD)                                |
+| bean_id           | integer | foreign key → beans.id                                 |
+| start_weight_g    | real    | grams                                                  |
+| end_weight_g      | real    | grams                                                  |
+| weight_loss_g     | real    | calculated: start − end                                |
+| first_crack_secs  | integer | countdown seconds remaining at first crack (nullable)  |
+| c_button_used     | integer | 0 or 1                                                 |
+| plus_presses      | integer | number of + presses after C                            |
+| minus_presses     | integer | number of − presses after C                            |
 
 **`settings`** — key-value configuration store
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `low_inventory_g` | `200` | Inventory alert threshold in grams |
+| Key                | Default | Description                           |
+|--------------------|---------|---------------------------------------|
+| `low_inventory_g`  | `200`   | Inventory alert threshold in grams    |
